@@ -90,13 +90,13 @@ public class SOLO extends OpMode {
         axonController = new RTPAxon(HoodMotor,HoodEncoder, RTPAxon.Direction.FORWARD);
         axonController.setPidCoeffs(0.009,0,0);
 
-        upShooterMotor = hardwareMap.get(DcMotorEx.class,"upShooterMotor");
-        downShooterMotor = hardwareMap.get(DcMotorEx.class,"downShooterMotor");
+        upShooterMotor = hardwareMap.get(DcMotorEx.class,"masterShooterMotor");
+        downShooterMotor = hardwareMap.get(DcMotorEx.class,"slaveShooterMotor");
         upShooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         downShooterMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         upShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         downShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        FlywheelEncoder = new WEncoder(new MotorEx(hardwareMap, "upShooterMotor").encoder);
+        FlywheelEncoder = new WEncoder(new MotorEx(hardwareMap, "masterShooterMotor").encoder);
         TurretEncoder = new WEncoder(new MotorEx(hardwareMap, "turretMotor").encoder);
         RevolverEncoder = new WEncoder(new MotorEx(hardwareMap,"revolverMotor").encoder);
 
@@ -192,7 +192,7 @@ public class SOLO extends OpMode {
 
 //        telemetry.addData("Target RPM",VelocityController.getTargetVelocity());
 //        telemetry.addData("Measured RPM",VelocityController.getVelocity());
-//        telemetry.addData("Shooter Velocity",upShooterMotor.getVelocity());
+        telemetry.addData("Shooter Velocity",upShooterMotor.getVelocity());
         telemetry.addData("Turret pose",getTurretAngle().getDegrees());
         telemetry.addData("Revolver pose",getRevolverAngle().getDegrees());
     }
