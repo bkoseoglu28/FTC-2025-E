@@ -1,17 +1,34 @@
 package org.firstinspires.ftc.teamcode.lib.drive;
 
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
+
 import com.arcrobotics.ftclib.drivebase.RobotDrive;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.Range;
 
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.lib.RobotHardware;
+import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.estimator.PinPointPoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.GoBildaPinpointDriver;
 
 public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
-    public final RobotHardware robot = RobotHardware.getInstance();
+    public DcMotorEx dtFrontLeftMotor;
+    public DcMotorEx dtFrontRightMotor;
+    public DcMotorEx dtBackLeftMotor;
+    public DcMotorEx dtBackRightMotor;
+    public PinPointPoseEstimator poseEstimator;
+    public GoBildaPinpointDriver OdometryModule;
 
     double[] pws = new double[4];
     double[] ws = new double[4];
@@ -72,7 +89,38 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
     }
 
     @Override
+    public void init(HardwareMap hardwareMap) {
+        this.OdometryModule= hardwareMap.get(GoBildaPinpointDriver.class,"LocalizerModule");
+        OdometryModule.initialize();
+        OdometryModule.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        OdometryModule.recalibrateIMU();
+        OdometryModule.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        OdometryModule.setOffsets(-159.5,27, DistanceUnit.MM);
+
+
+        this.dtBackLeftMotor = hardwareMap.get(DcMotorEx.class, "backLeftMotor");
+        dtBackLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        dtBackLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        this.dtFrontLeftMotor = hardwareMap.get(DcMotorEx.class, "frontLeftMotor");
+        dtFrontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        dtFrontLeftMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+
+        this.dtBackRightMotor = hardwareMap.get(DcMotorEx.class, "backRightMotor");
+        dtBackRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        dtBackRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        this.dtFrontRightMotor = hardwareMap.get(DcMotorEx.class, "frontRightMotor");
+        dtFrontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        dtFrontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        poseEstimator=new PinPointPoseEstimator(OdometryModule, VecBuilder.fill(0.3,0.3,0.3),VecBuilder.fill(0.1,0.1,0.1));
+
+
+    }
+
+    @Override
     public void periodic() {
+        poseEstimator.update();
+        OdometryModule.update();
         // Nothing here
     }
 
@@ -84,19 +132,19 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
     @Override
     public void write() {
         if (Math.abs(ws[0] - pws[0]) > 0.005) {
-            robot.dtFrontLeftMotor.setPower(ws[0]);
+            dtFrontLeftMotor.setPower(ws[0]);
             pws[0] = ws[0];
         }
         if (Math.abs(ws[1] - pws[1]) > 0.005) {
-            robot.dtFrontRightMotor.setPower(ws[1]);
+            dtFrontRightMotor.setPower(ws[1]);
             pws[1] = ws[1];
         }
         if (Math.abs(ws[2] - pws[2]) > 0.005) {
-            robot.dtBackLeftMotor.setPower(ws[2]);
+            dtBackLeftMotor.setPower(ws[2]);
             pws[2] = ws[2];
         }
         if (Math.abs(ws[3] - pws[3]) > 0.005) {
-            robot.dtBackRightMotor.setPower(ws[3]);
+            dtBackRightMotor.setPower(ws[3]);
             pws[3] = ws[3];
         }
     }
@@ -104,7 +152,14 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
 
     @Override
     public void reset() {
+        OdometryModule.resetPosAndIMU();
+        if(Superstructure.vision.robotPose!=null){
+            OdometryModule.resetPose(Superstructure.vision.robotPose);
+        }else{
+            OdometryModule.resetPose(new Pose2d());
+        }
 
+        OdometryModule.recalibrateIMU();
     }
 
     public String toString() {

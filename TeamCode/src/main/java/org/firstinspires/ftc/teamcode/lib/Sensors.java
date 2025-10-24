@@ -4,7 +4,7 @@ public class Sensors {
     public static enum SensorType {
         //INTAKEBANNER,
         TURRETENCODER,
-        FLYWHEEL_ENCODER,
+        orospucocu,
         POD_LEFT,
         POD_FRONT,
         //ELEVATORLIMIT,

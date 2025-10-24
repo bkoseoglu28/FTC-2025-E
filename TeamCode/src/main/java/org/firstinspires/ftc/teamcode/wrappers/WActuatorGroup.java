@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.wrappers;
 
-import com.arcrobotics.ftclib.controller.PIDController;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareDevice;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -17,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+
+import edu.wpi.first.math.controller.PIDController;
 
 
 public class WActuatorGroup {
@@ -289,6 +290,11 @@ public class WActuatorGroup {
 
     public double getPower() {
         return power;
+    }
+
+    public WActuatorGroup enableContinuousInput(double a, double b){
+        this.controller.enableContinuousInput(a,b);
+        return this;
     }
 
     public double getCurrentFeedforward() {

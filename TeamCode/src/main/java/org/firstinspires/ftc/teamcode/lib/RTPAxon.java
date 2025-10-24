@@ -265,7 +265,7 @@ public class RTPAxon implements CRServo{
 
     // Increment target rotation by a value
     public void changeTargetRotation(double change) {
-        targetRotation += change;
+        targetRotation += (change* (216.0/16.0));
     }
 
     // Set target rotation and reset PID

@@ -1,15 +1,11 @@
 package org.firstinspires.ftc.teamcode.lib;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.arcrobotics.ftclib.controller.PIDController;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
-import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.CRServoImplEx;
@@ -17,18 +13,15 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.Vision;
 import org.firstinspires.ftc.teamcode.lib.drive.MecanumDrivetrain;
-import org.firstinspires.ftc.teamcode.wrappers.RTPAxon;
 import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
-import org.firstinspires.ftc.teamcode.wrappers.WServo;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 import org.firstinspires.ftc.teamcode.wrappers.WVelocityGroup;
 
@@ -37,6 +30,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.estimator.PinPointPoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.GoBildaPinpointDriver;
 
 @Config
@@ -50,6 +47,7 @@ public class RobotHardware {
 
     public GoBildaPinpointDriver OdometryModule;
     public Limelight3A LL3;
+    public PinPointPoseEstimator poseEstimator;
 
 
     // Shooter
@@ -69,7 +67,7 @@ public class RobotHardware {
     public WVelocityGroup VelocityController;
     public WActuatorGroup TurretController;
     public WActuatorGroup RevolverController;
-    WEncoder FlywheelEncoder;
+    WEncoder orso;
     WEncoder TurretEncoder;
     WEncoder RevolverEncoder;
     int tickPerRev = 28;
@@ -96,6 +94,7 @@ public class RobotHardware {
     private ArrayList<WSubsystem> subsystems;
 
     public MecanumDrivetrain drivetrain;
+    public Vision vision;
 
     private final Object imuLock = new Object();
     public HashMap<Sensors.SensorType, Object> values;
@@ -118,7 +117,7 @@ public class RobotHardware {
         this.hardwareMap = hardwareMap;
         this.values = new HashMap<>();
         values.put(Sensors.SensorType.TURRETENCODER, 0.0);
-        values.put(Sensors.SensorType.FLYWHEEL_ENCODER, 0.0);
+        values.put(Sensors.SensorType.orospucocu, 0);
         values.put(Sensors.SensorType.POD_LEFT, 0.0);
         values.put(Sensors.SensorType.POD_FRONT, 0.0);
         values.put(Sensors.SensorType.REVOLVERENCODER, 0.0);
@@ -137,7 +136,7 @@ public class RobotHardware {
         revolverMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         turretMotor = hardwareMap.get(DcMotorEx.class,"turretMotor");
-        turretMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        turretMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         HoodEncoder  = hardwareMap.get(AnalogInput.class, "hoodEncoder");
         HoodMotor = hardwareMap.get(CRServoImplEx.class, "HoodMotor");
@@ -152,23 +151,24 @@ public class RobotHardware {
         masterShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         slaveShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        FlywheelEncoder = new WEncoder(new MotorEx(hardwareMap, "masterShooterMotor").encoder);
+        orso = new WEncoder(new MotorEx(hardwareMap, "slaveShooterMotor").encoder);
 
         TurretEncoder = new WEncoder(new MotorEx(hardwareMap, "turretMotor").encoder);
         RevolverEncoder = new WEncoder(new MotorEx(hardwareMap,"revolverMotor").encoder);
 
-        VelocityController = new WVelocityGroup(()-> FlywheelEncoder.getRawVelocity(),masterShooterMotor,slaveShooterMotor)
+        VelocityController = new WVelocityGroup(orso,masterShooterMotor,slaveShooterMotor)
                 .setPIDController(new PIDController(0,0,0))
                 .setFeedforwardSimple(1.5,0.0026,0.0001);
         TurretController = new WActuatorGroup(this::getTurretAngle,turretMotor)
-                .setPIDController(new com.arcrobotics.ftclib.controller.PIDController(0.015,0.09,0.001))
+                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.015,0.09,0.001))
                 .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0);
-        RevolverController = new WActuatorGroup(this::getRevolverAngle,revolverMotor)
-                .setPIDController(new com.arcrobotics.ftclib.controller.PIDController(0.1,0,0.001))
-                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0);
+        RevolverController = new WActuatorGroup(()-> getRevolverAngle().getDegrees(),revolverMotor)
+                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.07,0,0.001))
+                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0.2)
+                .setErrorTolerance(0.1)
+                .enableContinuousInput(180,-180);
         TurretEncoder.encoder.reset();
         RevolverEncoder.encoder.reset();
-        FlywheelEncoder.encoder.reset();
 
         RevolverController.setMaxPower(0.5);
 
@@ -197,6 +197,8 @@ public class RobotHardware {
         LL3.pipelineSwitch(0);
         LL3.start();
 
+        poseEstimator=new PinPointPoseEstimator(OdometryModule, VecBuilder.fill(0.3,0.3,0.3),VecBuilder.fill(0.1,0.1,0.1));
+
 
 
         //IntakeBanner = hardwareMap.get(RevColorSensorV3.class,"intakeSensor");
@@ -204,6 +206,7 @@ public class RobotHardware {
 
 
         this.LEDS = hardwareMap.get(RevBlinkinLedDriver.class, "ledDriver");
+
 
 //        this.IntakePivotLeft = new WServo(hardwareMap.get(Servo.class, "leftIntakeServo"));
 //        this.IntakePivotRight = new WServo(hardwareMap.get(Servo.class, "rightIntakeServo"));
@@ -224,6 +227,7 @@ public class RobotHardware {
 
         subsystems = new ArrayList<>();
         drivetrain = new MecanumDrivetrain();
+        vision= new Vision();
 
                 voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
     }
@@ -238,13 +242,14 @@ public class RobotHardware {
 //        }
 
         values.put(Sensors.SensorType.TURRETENCODER, getTurretAngle());
-        values.put(Sensors.SensorType.REVOLVERENCODER, getRevolverAngle());
-        values.put(Sensors.SensorType.FLYWHEEL_ENCODER, getShooterRPM());
+        values.put(Sensors.SensorType.REVOLVERENCODER, getRevolverAngle().getDegrees());
+        values.put(Sensors.SensorType.orospucocu, orso.getRawVelocity());
         //values.put(Sensors.SensorType.INTAKEBANNER, IntakeBanner.getDistance(DistanceUnit.MM));
         //values.put(Sensors.SensorType.ELEVATORLIMIT, ElevatorLimit.isPressed());
         VelocityController.read();
         TurretController.read();
         RevolverController.read();
+        vision.read();
     }
 
     public void write() {
@@ -252,6 +257,7 @@ public class RobotHardware {
         VelocityController.write();
         TurretController.write();
         RevolverController.write();
+        vision.write();
     }
 
     public void periodic() {
@@ -259,11 +265,13 @@ public class RobotHardware {
 //            voltageTimer.reset();
 //            voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
 //        }
+        poseEstimator.update();
         OdometryModule.update();
         drivetrain.periodic();
         VelocityController.periodicImpl();
         TurretController.periodic();
         RevolverController.periodic();
+        vision.periodic();
 //        if(Globals.IS_CLIMBING && Globals.SCORE){
 //            elevatorActuator.setPID(10,0,0);
 //            elevatorActuator.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,1);
@@ -280,16 +288,16 @@ public class RobotHardware {
     }
 
     public double getShooterRPM(){
-        return FlywheelEncoder.getRawVelocity();
+        return orso.getRawVelocity();
     }
     public double getTurretAngle(){
         double encoderRots= TurretEncoder.getPosition()/28;
         return encoderRots*(1.0/(1+(46.0/11.0)))*(16.0/112.0)*360;
     }
-    public double getRevolverAngle(){
+    public Rotation2d getRevolverAngle(){
         double encoderRots= RevolverEncoder.getPosition()/28;
 
-        return encoderRots*(1.0/(((1+(46.0/17.0))) * (1+(46.0/17.0))))*(16.0/30.0)*2*Math.PI;
+        return new Rotation2d(encoderRots*(1.0/(((1+(46.0/17.0))) * (1+(46.0/17.0))))*(16.0/30.0)*2*Math.PI);
     }
 
     public void reset() {
@@ -298,8 +306,14 @@ public class RobotHardware {
         }
 
         OdometryModule.resetPosAndIMU();
-        OdometryModule.setPosition(new Pose2D(DistanceUnit.MM,0,0,AngleUnit.DEGREES,0));
+        if(vision.robotPose!=null){
+            OdometryModule.resetPose(vision.robotPose);
+        }else{
+            OdometryModule.resetPose(new Pose2d());
+        }
+
         OdometryModule.recalibrateIMU();
+        vision.reset();
 
 
     }
