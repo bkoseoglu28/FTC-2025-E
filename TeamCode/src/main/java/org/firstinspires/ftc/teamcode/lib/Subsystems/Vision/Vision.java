@@ -7,8 +7,12 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.lib.RobotHardware;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
+import org.firstinspires.ftc.teamcode.lib.math.LinearFilter;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
 import edu.wpi.first.math.VecBuilder;
@@ -30,6 +34,8 @@ public class Vision extends WSubsystem {
     public Pose2d robotPose;
     public Obelisk currentObelisk=Obelisk.NULL;
     int ApriltagID;
+    LinearFilter filter ;
+    double horizontalDistance=0.0;
     public enum Obelisk{
         PPG,
         PGP,
@@ -42,12 +48,13 @@ public class Vision extends WSubsystem {
         LL3 = hardwareMap.get(Limelight3A.class,"limelight");
         LL3.pipelineSwitch(0);
         LL3.start();
+        filter = new LinearFilter(3);
     }
 
     @Override
     public void periodic() {
         if(robotPose!=null){
-            Superstructure.drivetrain.poseEstimator.addVisionMeasurement(robotPose, System.currentTimeMillis());
+            Superstructure.drivetrain.poseEstimator.addVisionMeasurement(robotPose, System.currentTimeMillis(),VecBuilder.fill(results.getStddevMt1()[0],results.getStddevMt1()[1],results.getStddevMt1()[2]));
         }
 
     }
@@ -56,16 +63,21 @@ public class Vision extends WSubsystem {
     public void read() {
         this.results=LL3.getLatestResult();
         if(results!=null){
-            this.tx = results.getTx();
+
+            this.tx = filter.calculate(results.getTx());
+
             this.ty= results.getTy();
             this.tv =results.isValid();
             if(!results.getFiducialResults().isEmpty()){
+                Position pose = new Position();
                 this.cameratofieldPose= new Pose2d(new Translation2d(
-                        results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().x,
-                        results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().y),
+                        results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.METER).x,
+                        results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.METER).y),
                         new Rotation2d(results.getFiducialResults().get(0).getCameraPoseTargetSpace().getOrientation().getYaw(AngleUnit.RADIANS)));
                 this.ApriltagID=results.getFiducialResults().get(0).getFiducialId();
-                this.robotPose=getRobotToField(cameratofieldPose,FieldAprilTags.TAG_24,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())),Superstructure.drivetrain.OdometryModule.getRotation2d());
+                //this.robotPose=getRobotToField(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())),Superstructure.drivetrain.OdometryModule.getRotation2d());
+                this.robotPose=getRobotPoseFromTurretCameraPose(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())));
+
             }
             if(ApriltagID==21){
                 this.currentObelisk=Obelisk.GPP;
@@ -85,22 +97,88 @@ public class Vision extends WSubsystem {
 
         // visionPose is the pose of the camera relative to the tag.
         Pose2d tagToCamera = new Pose2d(visionPose.getTranslation(), new Rotation2d())
-                .rotateBy(totalAngle)
-                .rotateBy(Rotation2d.fromDegrees(180));
+                .rotateBy(totalAngle);
+                //.rotateBy(Rotation2d.fromDegrees(180));
 
         Transform2d tagToCameraTransform = new Transform2d(tagToCamera.getTranslation(), new Rotation2d());
         Pose2d cameraToTag = tag2d.plus(tagToCameraTransform);
 
         // Calculate the root relative offset of camera.
         Translation2d turretToCamera = new Translation2d(162.77/1000, 0);
-        Translation2d robotToTurret = new Translation2d(65.0/1000, 0);
+        Translation2d robotToTurret = new Translation2d(-65.0/1000, 0);
         Translation2d robotToCamera = robotToTurret.plus(turretToCamera.rotateBy(turretAngle.plus(visionPose.getRotation())));
 
         Translation2d robotToTagTranslation = robotToCamera
-                .rotateBy(robotOrientation.rotateBy(Rotation2d.fromDegrees(180)))
+                .rotateBy(robotOrientation)//.rotateBy(Rotation2d.fromDegrees(180)))
                 .plus(cameraToTag.getTranslation());
 
         return new Pose2d(robotToTagTranslation, robotOrientation);
+    }
+    protected synchronized Pose2d getRobotPoseFromCameraPose(
+            Pose2d cameraPose,
+            Pose2d odometryPose,
+            Rotation2d turretAngle,
+            Pose3d tag) {
+
+        Pose3d tagCoords = tag;
+        Rotation2d fieldRelativeRobotOrientation = odometryPose.getRotation();
+        Rotation2d totalCameraAngle =
+                cameraPose.getRotation().plus(turretAngle).plus(fieldRelativeRobotOrientation);
+
+        Rotation2d aprilTagToCameraLensAngle = totalCameraAngle.minus(Rotation2d.fromDegrees(0));
+
+
+        double visionHorizontalDistance =tag.toPose2d().getTranslation().getDistance(cameraPose.getTranslation());
+
+
+
+        double fieldRelativeAprilTagToCameraX = visionHorizontalDistance * aprilTagToCameraLensAngle.getCos();
+        double fieldRelativeAprilTagToCameraY = visionHorizontalDistance * aprilTagToCameraLensAngle.getSin();
+
+        double radiusFromCameraLensToTurretCenterMeters = 162.77/1000;
+
+        // Field Oriented Limelight Rotation
+        Rotation2d fieldRelativeLimelightRotation =
+                Rotation2d.fromDegrees(0).minus(totalCameraAngle.plus(fieldRelativeRobotOrientation));
+
+        double fieldRelativeCameraToTurretCenterX =
+                radiusFromCameraLensToTurretCenterMeters * fieldRelativeLimelightRotation.getCos();
+        double fieldRelativeCameraToTurretCenterY =
+                radiusFromCameraLensToTurretCenterMeters * fieldRelativeLimelightRotation.getSin();
+
+
+        double turretCenterOffsetOnRobot = -65.0/1000;
+
+        double fieldRelativeTurretCenterToRobotCenterX =
+                turretCenterOffsetOnRobot * fieldRelativeRobotOrientation.getCos();
+        double fieldRelativeTurretCenterToRobotCenterY =
+                turretCenterOffsetOnRobot * fieldRelativeRobotOrientation.getSin();
+
+
+        double fieldRelativeDrivebaseCenterToAprilTagX = fieldRelativeAprilTagToCameraX
+                + fieldRelativeCameraToTurretCenterX
+                + fieldRelativeTurretCenterToRobotCenterX;
+        double fieldRelativeDrivebaseCenterToAprilTagY = fieldRelativeAprilTagToCameraY
+                + fieldRelativeCameraToTurretCenterY
+                + fieldRelativeTurretCenterToRobotCenterY;
+
+
+        double fieldRelativeRobotX = tagCoords.getX() + fieldRelativeDrivebaseCenterToAprilTagX;
+        double fieldRelativeRobotY = tagCoords.getY() + fieldRelativeDrivebaseCenterToAprilTagY;
+
+
+        return new Pose2d(fieldRelativeRobotX, fieldRelativeRobotY, fieldRelativeRobotOrientation);
+    }
+    protected synchronized Pose2d getRobotPoseFromTurretCameraPose(Pose2d visionPose, Pose3d tag, Rotation2d turretAngle){
+        Translation2d turretToCamera = new Translation2d(162.77/1000, 0);
+        Translation2d robotToTurret = new Translation2d(-65.0/1000, 0);
+        Rotation2d robotanglecamera = visionPose.getRotation().minus(turretAngle);
+        Translation2d robotTrans=visionPose.getTranslation().rotateBy(robotanglecamera).minus(turretToCamera).minus(robotToTurret);
+
+        Pose2d robotfromapriltag=new Pose2d(robotTrans,robotanglecamera);
+
+        Pose2d robotfromfield=robotfromapriltag.relativeTo(tag.toPose2d());
+        return robotfromfield;
     }
     @Override
     public void write() {

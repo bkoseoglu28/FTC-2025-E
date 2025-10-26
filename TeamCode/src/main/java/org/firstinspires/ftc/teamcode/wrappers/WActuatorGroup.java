@@ -255,8 +255,8 @@ public class WActuatorGroup {
 
     public void updateConstraints(ProfileConstraints constraints) {
         this.constraints = constraints;
-//        setMotionProfile(new AsymmetricMotionProfile(position, targetPosition, constraints));
-//        this.constr
+        setMotionProfile(targetPosition, constraints);
+
     }
 
     public void updatePID(double P, double I, double D) {

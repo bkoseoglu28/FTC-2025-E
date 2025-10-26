@@ -260,7 +260,7 @@ public class RTPAxon implements CRServo{
 
     // Get current target rotation
     public double getTargetRotation() {
-        return targetRotation;
+        return targetRotation*(16.0/219.0);
     }
 
     // Increment target rotation by a value
