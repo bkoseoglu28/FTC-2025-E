@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.lib.Constants;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Feeder.Feeder;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.FlyWheel.Flywheel;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Hood.Hood;
+import org.firstinspires.ftc.teamcode.lib.Subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Revolver.Revolver;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Turret.Turret;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.FieldAprilTags;
@@ -37,6 +38,7 @@ public class Superstructure {
     public static MecanumDrivetrain drivetrain=new MecanumDrivetrain();
     public static double voltage=12;
     public static Vision vision=new Vision();
+    public static Intake intake = new Intake();
 
     public static PIDController visionTargeting;
     public static systemState currentSystemState = systemState.IDLE;
@@ -50,10 +52,12 @@ public class Superstructure {
     public static enum systemState{
         IDLE,
         AIMING,
-        SHOOTING
+        SHOOTING,
+        INTAKING
     }
     public static enum wantedState{
         SHOOT,
+        INTAKE,
         IDLE
     }
 
@@ -65,6 +69,7 @@ public class Superstructure {
         turret.init(hardwareMap);
         vision.init(hardwareMap);
         drivetrain.init(hardwareMap);
+        intake.init(hardwareMap);
         hardwaremap=hardwareMap;
         LEDS = hardwareMap.get(RevBlinkinLedDriver.class, "ledDriver");
 
@@ -130,12 +135,24 @@ public class Superstructure {
                 flywheel.setSetpointRPM(1500);
                 revolver.setRevolverAngle(revolverTarget);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
-                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
+                intake.setIntakeState(Intake.Systemstate.IDLE);
+                switch (Superstructure.revolver.currentRightColor){
+                    case GREEN:
+                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.DARK_GREEN);
+                        break;
+                    case PURPLE:
+                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.SINELON_PARTY_PALETTE);
+                        break;
+                    case UNKNOWN:
+                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
+                        break;
+                }
                 break;
             case AIMING:
                 //turret.setTurretAngle(90);
                 flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
+                intake.setIntakeState(Intake.Systemstate.IDLE);
                 ready = flywheel.IsAtSetpoint()&& hood.IsAtSetpoint();
                 if(ready){
                     setCurrentSystemState(systemState.SHOOTING);
@@ -151,6 +168,14 @@ public class Superstructure {
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
                 flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
                 feeder.setFeederState(Feeder.Systemstate.FEED);
+                intake.setIntakeState(Intake.Systemstate.IDLE);
+                break;
+            case INTAKING:
+                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_PARTY_PALETTE);
+                flywheel.setSetpointRPM(1500);
+                feeder.setFeederState(Feeder.Systemstate.IDLE);
+                intake.setIntakeState(Intake.Systemstate.INTAKE);
+
                 break;
         }
         voltage=hardwaremap.voltageSensor.iterator().next().getVoltage();
@@ -161,6 +186,7 @@ public class Superstructure {
         turret.periodic();
         vision.periodic();
         drivetrain.periodic();
+        intake.periodic();
     }
 
 
@@ -172,6 +198,7 @@ public class Superstructure {
         turret.read();
         vision.read();
         drivetrain.read();
+        intake.read();
     }
 
     public static void write() {
@@ -182,6 +209,7 @@ public class Superstructure {
         turret.write();
         vision.write();
         drivetrain.write();
+        intake.write();
     }
 
     public void reset() {
@@ -192,5 +220,6 @@ public class Superstructure {
         turret.reset();
         vision.reset();
         drivetrain.reset();
+        intake.reset();
     }
 }

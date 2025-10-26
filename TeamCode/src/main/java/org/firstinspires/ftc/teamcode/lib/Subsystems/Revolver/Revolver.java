@@ -26,7 +26,15 @@ public class Revolver extends WSubsystem {
     WEncoder RevolverEncoder;
     WActuatorGroup RevolverController;
     public RevColorSensorV3 shooterSensor;
+    public RevColorSensorV3 rightSensor;
+    public colors currentRightColor;
+
     public int sensorIndex=0;
+    public enum colors{
+        PURPLE,
+        GREEN,
+        UNKNOWN
+    }
 
     @Override
     public void init(HardwareMap hardwareMap) {
@@ -42,6 +50,8 @@ public class Revolver extends WSubsystem {
         RevolverController.setMaxPower(0.5);
         RevolverEncoder.encoder.reset();
         shooterSensor=hardwareMap.get(RevColorSensorV3.class,"shooterSensor");
+        rightSensor= hardwareMap.get(RevColorSensorV3.class,"denemeSensor");
+        rightSensor.setGain(4);
     }
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(getRevolverAngle().getDegrees(),RevolverController.getTargetPosition(),10);
@@ -61,6 +71,19 @@ public class Revolver extends WSubsystem {
         }
 
     }
+    public void getRightColor(){
+        float normred =rightSensor.getNormalizedColors().red;
+        float normblue =rightSensor.getNormalizedColors().blue;
+        float normgreen =rightSensor.getNormalizedColors().green;
+
+        if(normblue < 0.02 && normgreen < 0.026 && normred < 0.007){
+            currentRightColor = colors.GREEN;
+        } else if(normblue > 0.02 && normgreen > 0.013 && normred > 0.011){
+            currentRightColor = colors.PURPLE;
+        } else {
+            currentRightColor = colors.UNKNOWN;
+        }
+    }
     public void setRevolverAngle(double angle){
         RevolverController.setTargetPosition(angle);
     }
@@ -72,6 +95,7 @@ public class Revolver extends WSubsystem {
 
     @Override
     public void read() {
+        getRightColor();
         handleShooterSensor();
         RevolverController.read();
     }
