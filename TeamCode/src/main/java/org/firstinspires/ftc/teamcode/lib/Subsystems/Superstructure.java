@@ -139,7 +139,7 @@ public class Superstructure {
             case IDLE:
                 //turret.setTurretAngle(0);
                 flywheel.setSetpointRPM(1500);
-                revolver.setRevolverAngle(revolverTarget);
+                //revolver.setRevolverAngle(revolverTarget);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
@@ -261,10 +261,10 @@ public class Superstructure {
 
     public static void write() {
         feeder.write();
-        flywheel.write();
-        hood.write();
+//        flywheel.write();
+//        hood.write();
         revolver.write();
-        turret.write();
+        //turret.write();
         vision.write();
         drivetrain.write();
         intake.write();

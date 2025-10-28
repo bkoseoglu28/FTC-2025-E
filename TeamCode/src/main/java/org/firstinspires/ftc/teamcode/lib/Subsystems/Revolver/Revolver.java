@@ -21,9 +21,12 @@ import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.util.Util;
-
+@Config
 public class Revolver extends WSubsystem {
-
+    public static double kp=0.022;
+    public static double ki=0;
+    public static double kd=0.00035;
+    public static double feedwrd=0;
     DcMotorEx revolverMotor;
     WEncoder RevolverEncoder;
     public WActuatorGroup RevolverController;
@@ -51,10 +54,10 @@ public class Revolver extends WSubsystem {
     public void init(HardwareMap hardwareMap) {
         revolverMotor = hardwareMap.get(DcMotorEx.class,"revolverMotor");
         revolverMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        revolverMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        revolverMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         RevolverEncoder = new WEncoder(new MotorEx(hardwareMap,"revolverMotor").encoder);
         RevolverController = new WActuatorGroup(()-> getRevolverAngle().getDegrees(),revolverMotor)
-                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.01,0.001,0.00005))
+                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.05,0,0))
                 .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0.1)
                 .enableContinuousInput(180,-180);
         RevolverController.setMaxPower(0.375);
@@ -73,9 +76,11 @@ public class Revolver extends WSubsystem {
         return RevolverController.getController().atSetpoint();
     }
     public Rotation2d getRevolverAngle(){
-        double encoderRots= RevolverEncoder.getPosition()/28;
+        double encoderRots= RevolverEncoder.getPosition();
 
-        return new Rotation2d(encoderRots*(1.0/(((1+(46.0/17.0))) * (1+(46.0/17.0))))*(16.0/30.0)*2*Math.PI);
+        return new Rotation2d(encoderRots*(1.0/((((1+(46.0/17))) * (1+(46/17.0))) * (1+(46.0/17)) * 28))*(16.0/30.0)*2*Math.PI);
+
+
     }
     public void handleShooterSensor(){
         if(shooterSensor.getDistance(DistanceUnit.MM)>30){
@@ -166,6 +171,8 @@ public class Revolver extends WSubsystem {
     }
     @Override
     public void periodic() {
+        RevolverController.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,feedwrd);
+        RevolverController.setPID(kp,ki,kd);
         RevolverController.periodic();
     }
 

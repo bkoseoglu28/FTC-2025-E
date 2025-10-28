@@ -4,6 +4,7 @@ import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.har
 
 import com.acmerobotics.dashboard.config.Config;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -19,6 +20,7 @@ import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.Util;
@@ -31,19 +33,23 @@ public class Turret extends WSubsystem {
     DcMotorEx turretMotor;
     WEncoder TurretEncoder;
     WActuatorGroup TurretController;
+    PIDController visionPID;
+    SimpleMotorFeedforward feedfwrd;
+
 
     @Override
     public void init(HardwareMap hardwareMap) {
         turretMotor = hardwareMap.get(DcMotorEx.class,"turretMotor");
         turretMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        turretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         TurretEncoder = new WEncoder(new MotorEx(hardwareMap, "turretMotor").encoder);
 
         TurretController = new WActuatorGroup(this::getTurretAngle,turretMotor)
                 .setPIDController(new PIDController(0.0045,0,0.0002))
                 .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0);
         TurretEncoder.encoder.reset();
-
-
+        visionPID = new PIDController(0,0,0);
+        feedfwrd= new SimpleMotorFeedforward(0,0,0);
     }
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(getTurretAngle(),TurretController.getTargetPosition(),10);
@@ -58,7 +64,7 @@ public class Turret extends WSubsystem {
     }
     public double getTurretAngle(){
         double encoderRots= TurretEncoder.getPosition()/28;
-        return encoderRots*(1.0/(1+(46.0/11.0)))*(16.0/112.0)*360;
+        return encoderRots*(1.0/(((1+(46.0/17.0))) * (1+(46.0/17.0))))*(16.0/112.0)*360;
     }
     double handleTurretSetpoint(double setpoint){
         if(setpoint<-125){
@@ -90,6 +96,11 @@ public class Turret extends WSubsystem {
 
     @Override
     public void write() {
+//        if(Superstructure.vision.tv){
+//            turretMotor.setPower(visionPID.calculate(Superstructure.vision.tx,0));
+//        }else{
+//            TurretController.write();
+//        }
         TurretController.write();
     }
 

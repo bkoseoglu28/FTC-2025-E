@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.revolver;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
 
 import android.telephony.IccOpenLogicalChannelResponse;
@@ -53,7 +54,7 @@ public class SOLO extends OpMode {
     FtcDashboard dashboard;
     public static double targetRPM=0;
     public static double hoodAngle=0;
-    Pose2d robopose=new Pose2d();
+    Pose2d robopose = new Pose2d();
     double target = 0;
     boolean shoot = false;
 
@@ -78,12 +79,19 @@ public class SOLO extends OpMode {
         }else if (gamepad1.cross) {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
         }
+        if (gamepad1.dpad_up) {
+            revolver.RevolverController.setTargetPosition(0);
+        }else if (gamepad1.dpad_left) {
+            revolver.RevolverController.setTargetPosition(-120);
+        }else if (gamepad1.dpad_right) {
+            revolver.RevolverController.setTargetPosition(120);
+        }
+
 
 
         if (gamepad1.right_trigger>0.5) {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.INTAKE);
         }
-
 
         if(Superstructure.vision.robotPose!=null){
             robopose =Superstructure.vision.robotPose;
