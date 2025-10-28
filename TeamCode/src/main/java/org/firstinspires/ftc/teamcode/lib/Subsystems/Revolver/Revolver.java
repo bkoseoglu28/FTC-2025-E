@@ -17,6 +17,8 @@ import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
+import java.util.function.DoubleSupplier;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.util.Util;
 
@@ -24,10 +26,16 @@ public class Revolver extends WSubsystem {
 
     DcMotorEx revolverMotor;
     WEncoder RevolverEncoder;
-    WActuatorGroup RevolverController;
+    public WActuatorGroup RevolverController;
     public RevColorSensorV3 shooterSensor;
+    public RevColorSensorV3 feederSensor;
     public RevColorSensorV3 rightSensor;
-    public colors currentRightColor;
+    public RevColorSensorV3 leftSensor;
+    public colors currentRightColor= colors.UNKNOWN;
+    public colors currentLeftColor= colors.UNKNOWN;
+    public colors currentFeeederColor= colors.UNKNOWN;
+
+    public Slot currentSlot;
 
     public int sensorIndex=0;
     public enum colors{
@@ -35,6 +43,9 @@ public class Revolver extends WSubsystem {
         GREEN,
         UNKNOWN
     }
+    public Slot slot1=new Slot(-120);
+    public Slot slot2=new Slot(0);
+    public Slot slot3=new Slot(120);
 
     @Override
     public void init(HardwareMap hardwareMap) {
@@ -43,18 +54,23 @@ public class Revolver extends WSubsystem {
         revolverMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         RevolverEncoder = new WEncoder(new MotorEx(hardwareMap,"revolverMotor").encoder);
         RevolverController = new WActuatorGroup(()-> getRevolverAngle().getDegrees(),revolverMotor)
-                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.017,0.0085,0.0004))
-                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0.16)
-                .setErrorTolerance(0.1)
+                .setPIDController(new edu.wpi.first.math.controller.PIDController(0.01,0.001,0.00005))
+                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0.1)
                 .enableContinuousInput(180,-180);
-        RevolverController.setMaxPower(0.5);
+        RevolverController.setMaxPower(0.375);
         RevolverEncoder.encoder.reset();
         shooterSensor=hardwareMap.get(RevColorSensorV3.class,"shooterSensor");
-        rightSensor= hardwareMap.get(RevColorSensorV3.class,"denemeSensor");
-        rightSensor.setGain(4);
+        leftSensor= hardwareMap.get(RevColorSensorV3.class,"leftSensor");
+        leftSensor.setGain(10);
+        rightSensor= hardwareMap.get(RevColorSensorV3.class,"rightSensor");
+        rightSensor.setGain(10);
+        feederSensor= hardwareMap.get(RevColorSensorV3.class,"feederSensor");
+        feederSensor.setGain(10);
+        currentSlot=slot2;
     }
     public boolean IsAtSetpoint(){
-        return Util.epsilonEquals(getRevolverAngle().getDegrees(),RevolverController.getTargetPosition(),10);
+        RevolverController.getController().setTolerance(25);
+        return RevolverController.getController().atSetpoint();
     }
     public Rotation2d getRevolverAngle(){
         double encoderRots= RevolverEncoder.getPosition()/28;
@@ -71,30 +87,93 @@ public class Revolver extends WSubsystem {
         }
 
     }
-    public void getRightColor(){
-        float normred =rightSensor.getNormalizedColors().red;
-        float normblue =rightSensor.getNormalizedColors().blue;
-        float normgreen =rightSensor.getNormalizedColors().green;
+    public void setVoltage(DoubleSupplier voltage){
+        RevolverController.setVoltageSupplier(voltage);
+    }
+    public void getLeftColor(){
+        double normred =leftSensor.getNormalizedColors().red;
+        double normblue =leftSensor.getNormalizedColors().blue;
+        double normgreen =leftSensor.getNormalizedColors().green;
 
-        if(normblue < 0.02 && normgreen < 0.026 && normred < 0.007){
+        if(normblue > 0.013 && normgreen > 0.018 && normred < 0.01){
+            currentLeftColor = colors.GREEN;
+        } else if(normblue > 0.018 && normgreen > 0.013 && normred > 0.01){
+            currentLeftColor = colors.PURPLE;
+        } else {
+            currentLeftColor = colors.UNKNOWN;
+        }
+    }
+    public void getRightColor(){
+        double normred =rightSensor.getNormalizedColors().red;
+        double normblue =rightSensor.getNormalizedColors().blue;
+        double normgreen =rightSensor.getNormalizedColors().green;
+
+        if(normblue > 0.013 && normgreen > 0.018 && normred < 0.01){
             currentRightColor = colors.GREEN;
-        } else if(normblue > 0.02 && normgreen > 0.013 && normred > 0.011){
+        } else if(normblue > 0.015 && normgreen > 0.01 && normred > 0.0085){
             currentRightColor = colors.PURPLE;
         } else {
             currentRightColor = colors.UNKNOWN;
         }
     }
+    public void getFeederColor(){
+        double normred =feederSensor.getNormalizedColors().red;
+        double normblue =feederSensor.getNormalizedColors().blue;
+        double normgreen =feederSensor.getNormalizedColors().green;
+
+        if(normblue < 0.18 && normgreen > 0.09 && normred < 0.04){
+            currentFeeederColor = colors.GREEN;
+        } else if(normblue < 0.22 && normgreen < 0.13 && normred > 0.04){
+            currentFeeederColor = colors.PURPLE;
+        } else {
+            currentFeeederColor = colors.UNKNOWN;
+        }
+    }
+    public void setSlots(double currentAngle){
+        if(IsAtSetpoint()){
+            if(currentAngle== slot1.getAngle()){
+                slot1.setColor(currentFeeederColor);
+                slot2.setColor(currentRightColor);
+                slot3.setColor(currentLeftColor);
+                slot2.setIsthereBall(rightSensor.getDistance(DistanceUnit.MM)<55);
+                slot3.setIsthereBall(leftSensor.getDistance(DistanceUnit.MM)<55);
+                slot1.setIsthereBall(feederSensor.getDistance(DistanceUnit.MM)<50);
+                currentSlot=slot1;
+            } else if (currentAngle== slot2.getAngle()) {
+                slot2.setColor(currentFeeederColor);
+                slot3.setColor(currentRightColor);
+                slot1.setColor(currentLeftColor);
+                slot3.setIsthereBall(rightSensor.getDistance(DistanceUnit.MM)<55);
+                slot1.setIsthereBall(leftSensor.getDistance(DistanceUnit.MM)<55);
+                slot2.setIsthereBall(feederSensor.getDistance(DistanceUnit.MM)<50);
+                currentSlot=slot2;
+            }else if (currentAngle== slot3.getAngle()) {
+                slot3.setColor(currentFeeederColor);
+                slot2.setColor(currentLeftColor);
+                slot1.setColor(currentRightColor);
+                slot2.setIsthereBall(leftSensor.getDistance(DistanceUnit.MM)<55);
+                slot1.setIsthereBall(rightSensor.getDistance(DistanceUnit.MM)<55);
+                slot3.setIsthereBall(feederSensor.getDistance(DistanceUnit.MM)<50);
+
+                currentSlot=slot3;
+            }
+        }
+
+    }
+
     public void setRevolverAngle(double angle){
         RevolverController.setTargetPosition(angle);
     }
     @Override
     public void periodic() {
-        RevolverController.setVoltageSupplier(Superstructure.voltage);
         RevolverController.periodic();
     }
 
     @Override
     public void read() {
+        setSlots(RevolverController.getTargetPosition());
+        getLeftColor();
+        getFeederColor();
         getRightColor();
         handleShooterSensor();
         RevolverController.read();

@@ -33,7 +33,7 @@ public class WActuatorGroup {
     private ProfileConstraints constraints;
     private ProfileState state;
     private PIDController controller;
-    private double voltage;
+    private DoubleSupplier voltage;
     public ElapsedTime timer;
     private double position = 0.0;
     private double pTargetPosition = 0.0;
@@ -153,7 +153,7 @@ public class WActuatorGroup {
             for (HardwareDevice device : devices.values()) {
                 if (device instanceof DcMotor) {
                     double correction = 1.0;
-                    if (voltage != 0) correction = 12.0 / voltage;
+                    if (voltage != null) correction = 12.0 / voltage.getAsDouble();
                     if (!floating) ((DcMotor) device).setPower((power*max) * correction);
                     else ((DcMotor) device).setPower(0);
                     pPower = power;
@@ -192,7 +192,7 @@ public class WActuatorGroup {
         this.timer.reset();
     }
 
-    public WActuatorGroup setVoltageSupplier(double voltage) {
+    public WActuatorGroup setVoltageSupplier(DoubleSupplier voltage) {
         this.voltage = voltage;
         return this;
     }
@@ -210,6 +210,9 @@ public class WActuatorGroup {
     public void setCurrentPosition(double position) {
         this.position = position;
 
+    }
+    public PIDController getController(){
+        return this.controller;
     }
 
     public WActuatorGroup setPID(double p, double i, double d) {

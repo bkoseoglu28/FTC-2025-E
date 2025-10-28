@@ -21,7 +21,7 @@ public class Hood extends WSubsystem {
         HoodMotor = hardwareMap.get(CRServoImplEx.class, "HoodMotor");
 
         axonController = new org.firstinspires.ftc.teamcode.lib.RTPAxon(HoodMotor,HoodEncoder, org.firstinspires.ftc.teamcode.lib.RTPAxon.Direction.FORWARD);
-        axonController.setPidCoeffs(0.0065,0,0.000005);
+        axonController.setPidCoeffs(0.0055,0,0.0000002);
     }
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(axonController.getTotalRotation(),axonController.getTargetRotation(),2);

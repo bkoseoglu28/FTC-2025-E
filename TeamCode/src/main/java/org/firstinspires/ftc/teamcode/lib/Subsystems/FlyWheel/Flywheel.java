@@ -15,9 +15,16 @@ import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 import org.firstinspires.ftc.teamcode.wrappers.WVelocityGroup;
 
-import edu.wpi.first.util.Util;
+import java.util.function.DoubleSupplier;
 
+import edu.wpi.first.util.Util;
+@Config
 public class Flywheel extends WSubsystem {
+    public static double ks=0;
+    public static double kv=0;
+
+    public static double ka=0;
+
     DcMotorEx masterShooterMotor;
     DcMotorEx slaveShooterMotor;
      WVelocityGroup VelocityController;
@@ -32,12 +39,13 @@ public class Flywheel extends WSubsystem {
         slaveShooterMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         encoder = new WEncoder(new MotorEx(hardwareMap, "slaveShooterMotor").encoder);
         VelocityController = new WVelocityGroup(encoder,masterShooterMotor,slaveShooterMotor)
-                .setPIDController(new PIDController(0,0,0))
-                .setFeedforwardSimple(1.4,0.00185,0.0003);
+                .setPIDController(new PIDController(0.01,0,0))
+                .setFeedforwardSimple(2.2,0.0024,0);
         //1.5,0.0026,0.0001
+        //1.4,0.00185,0.0003
     }
     public boolean IsAtSetpoint(){
-        return Util.epsilonEquals(getShooterRPM(),VelocityController.getTargetVelocity(),100);
+        return Util.epsilonEquals(getShooterRPM(),VelocityController.getTargetVelocity(),200);
     }
     public void setSetpointRPM(double rpm){
         VelocityController.setTargetVelocity(rpm);
@@ -47,8 +55,11 @@ public class Flywheel extends WSubsystem {
     }
     @Override
     public void periodic() {
-        VelocityController.setVoltageSupplier(Superstructure.voltage);
-        VelocityController.periodicImpl();
+        //VelocityController.setFeedforwardSimple(ks,kv,ka);
+        VelocityController.periodic();
+    }
+    public void setVoltage(DoubleSupplier voltage){
+        VelocityController.setVoltageSupplier(voltage);
     }
 
     @Override

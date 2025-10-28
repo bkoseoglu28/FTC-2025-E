@@ -16,6 +16,8 @@ import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
+import java.util.function.DoubleSupplier;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.util.Units;
@@ -37,7 +39,7 @@ public class Turret extends WSubsystem {
         TurretEncoder = new WEncoder(new MotorEx(hardwareMap, "turretMotor").encoder);
 
         TurretController = new WActuatorGroup(this::getTurretAngle,turretMotor)
-                .setPIDController(new PIDController(0.008,0,0.0003))
+                .setPIDController(new PIDController(0.0045,0,0.0002))
                 .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0);
         TurretEncoder.encoder.reset();
 
@@ -74,9 +76,11 @@ public class Turret extends WSubsystem {
     @Override
     public void periodic() {
         //TurretController.setPID(kp,ki,kd);
-        TurretController.setVoltageSupplier(Superstructure.voltage);
         //TurretController.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,ff());
         TurretController.periodic();
+    }
+    public void setVoltage(DoubleSupplier voltage){
+        TurretController.setVoltageSupplier(voltage);
     }
 
     @Override

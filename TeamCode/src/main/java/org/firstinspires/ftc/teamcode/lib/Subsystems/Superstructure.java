@@ -21,14 +21,17 @@ import org.firstinspires.ftc.teamcode.lib.drive.MecanumDrivetrain;
 import org.firstinspires.ftc.teamcode.lib.math.InterpolatingDouble;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
+import java.util.function.DoubleSupplier;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-
+@Config
 public class Superstructure {
-
+    public static double setpointRPM=0;
+    public static double setpointHood=0;
     static HardwareMap hardwaremap;
     public static Feeder feeder=new Feeder();
     public static Flywheel flywheel=new Flywheel();
@@ -36,7 +39,7 @@ public class Superstructure {
     public static Revolver revolver=new Revolver();
     public static Turret turret=new Turret();
     public static MecanumDrivetrain drivetrain=new MecanumDrivetrain();
-    public static double voltage=12;
+    public static double voltage=0;
     public static Vision vision=new Vision();
     public static Intake intake = new Intake();
 
@@ -53,6 +56,7 @@ public class Superstructure {
         IDLE,
         AIMING,
         SHOOTING,
+        SHOOTING_OBELISK,
         INTAKING
     }
     public static enum wantedState{
@@ -88,6 +92,9 @@ public class Superstructure {
                 if(currentSystemState==systemState.IDLE){
                     setCurrentSystemState(systemState.AIMING);
                 }
+                break;
+            case INTAKE:
+                setCurrentSystemState(systemState.INTAKING);
                 break;
             case IDLE:
             default:
@@ -126,59 +133,112 @@ public class Superstructure {
 
 
 
-        hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+        //hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+        hood.setHoodAngle(setpointHood);
 
         switch (currentSystemState){
             case IDLE:
                 //turret.setTurretAngle(0);
-                revolverTarget=-120;
                 flywheel.setSetpointRPM(1500);
                 revolver.setRevolverAngle(revolverTarget);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
-                switch (Superstructure.revolver.currentRightColor){
-                    case GREEN:
-                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.DARK_GREEN);
-                        break;
-                    case PURPLE:
-                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.SINELON_PARTY_PALETTE);
-                        break;
-                    case UNKNOWN:
-                        LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
-                        break;
-                }
+                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
                 break;
             case AIMING:
-                //turret.setTurretAngle(90);
-                flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+                flywheel.setSetpointRPM(setpointRPM);
+                //flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 ready = flywheel.IsAtSetpoint()&& hood.IsAtSetpoint();
-                if(ready){
-                    setCurrentSystemState(systemState.SHOOTING);
-                }
+                    if(ready){
+                        setCurrentSystemState(systemState.SHOOTING);
+                    }
+                    if(revolver.currentSlot.IsthereBall()){
+                        revolverTarget= (int) revolver.currentSlot.getAngle();
+                    }else{
+                       if(revolver.currentSlot==revolver.slot1){
+                           if(revolver.slot2.IsthereBall()){
+                               revolverTarget= (int) revolver.slot2.getAngle();
+                           }else if (revolver.slot3.IsthereBall()){
+                               revolverTarget= (int) revolver.slot3.getAngle();
+                           }
+                       } else if (revolver.currentSlot==revolver.slot2) {
+                           if(revolver.slot1.IsthereBall()){
+                               revolverTarget= (int) revolver.slot1.getAngle();
+                           }else if (revolver.slot3.IsthereBall()){
+                               revolverTarget= (int) revolver.slot3.getAngle();
+                           }
+                       } else if (revolver.currentSlot==revolver.slot3) {
+                           if(revolver.slot1.IsthereBall()){
+                               revolverTarget= (int) revolver.slot1.getAngle();
+                           }else if (revolver.slot2.IsthereBall()){
+                               revolverTarget= (int) revolver.slot2.getAngle();
+                           }
+                       }
+                    }
+                revolver.setRevolverAngle(revolverTarget);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE);
                 break;
             case SHOOTING:
-                if(revolver.sensorIndex==2){
-                    revolverTarget+=120;
-                    revolver.setRevolverAngle(revolverTarget);
-                    setCurrentSystemState(systemState.AIMING);
-                }
+                    if(revolver.sensorIndex==2){
+                        setCurrentSystemState(systemState.AIMING);
+                    }
+
+                revolver.setRevolverAngle(revolverTarget);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
                 flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
                 feeder.setFeederState(Feeder.Systemstate.FEED);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 break;
             case INTAKING:
-                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_PARTY_PALETTE);
+//                if(revolver.IsAtSetpoint()){
+//                if((revolver.slot1.IsthereBall()&&!revolver.slot2.IsthereBall()&&!revolver.slot3.IsthereBall())||
+//                        (revolver.slot1.IsthereBall()&&revolver.slot2.IsthereBall()&&!revolver.slot3.IsthereBall())||
+//                        (revolver.slot1.IsthereBall()&&!revolver.slot2.IsthereBall()&&revolver.slot3.IsthereBall())){
+//                    revolverTarget= (int) revolver.slot1.getAngle();
+//                }else if((!revolver.slot1.IsthereBall()&&revolver.slot2.IsthereBall()&&!revolver.slot3.IsthereBall())||
+//                        (!revolver.slot1.IsthereBall()&&revolver.slot2.IsthereBall()&&revolver.slot3.IsthereBall())){
+//                    revolverTarget= (int) revolver.slot2.getAngle();
+//                }else if(!revolver.slot1.IsthereBall()&&!revolver.slot2.IsthereBall()&&revolver.slot3.IsthereBall()){
+//                    revolverTarget= (int) revolver.slot3.getAngle();
+//                }}
+                if(revolver.currentSlot.IsthereBall()){
+                    revolverTarget= (int) revolver.currentSlot.getAngle();
+                }else{
+                    if(revolver.currentSlot==revolver.slot1){
+                        if(revolver.slot2.IsthereBall()){
+                            revolverTarget= (int) revolver.slot2.getAngle();
+                        }else if (revolver.slot3.IsthereBall()){
+                            revolverTarget= (int) revolver.slot3.getAngle();
+                        }else{
+                            revolverTarget= (int) revolver.slot1.getAngle();
+                        }
+                    } else if (revolver.currentSlot==revolver.slot2) {
+                        if(revolver.slot1.IsthereBall()){
+                            revolverTarget= (int) revolver.slot1.getAngle();
+                        }else if (revolver.slot3.IsthereBall()){
+                            revolverTarget= (int) revolver.slot3.getAngle();
+                        }else{
+                            revolverTarget= (int) revolver.slot2.getAngle();
+                        }
+                    } else if (revolver.currentSlot==revolver.slot3) {
+                        if(revolver.slot1.IsthereBall()){
+                            revolverTarget= (int) revolver.slot1.getAngle();
+                        }else if (revolver.slot2.IsthereBall()){
+                            revolverTarget= (int) revolver.slot2.getAngle();
+                        }else{
+                            revolverTarget= (int) revolver.slot3.getAngle();
+                        }
+                    }}
+                revolver.setRevolverAngle(revolverTarget);
+                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.VIOLET);
                 flywheel.setSetpointRPM(1500);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.INTAKE);
 
                 break;
         }
-        voltage=hardwaremap.voltageSensor.iterator().next().getVoltage();
         feeder.periodic();
         flywheel.periodic();
         hood.periodic();
@@ -221,5 +281,11 @@ public class Superstructure {
         vision.reset();
         drivetrain.reset();
         intake.reset();
+    }
+
+    public static void setVoltage(DoubleSupplier voltage) {
+        flywheel.setVoltage(voltage);
+        revolver.setVoltage(voltage);
+        turret.setVoltage(voltage);
     }
 }

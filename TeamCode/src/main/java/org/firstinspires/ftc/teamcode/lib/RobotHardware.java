@@ -267,7 +267,7 @@ public class RobotHardware {
         poseEstimator.update();
         OdometryModule.update();
         drivetrain.periodic();
-        VelocityController.periodicImpl();
+        VelocityController.periodic();
         TurretController.periodic();
         RevolverController.periodic();
         vision.periodic();

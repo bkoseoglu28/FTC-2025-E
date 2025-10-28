@@ -12,7 +12,7 @@ public class Intake extends WSubsystem {
 
     CRServo masterIntakeMotor;
     CRServo slaveIntakeMotor;
-    Systemstate currentState;
+    Systemstate currentState= Systemstate.IDLE;
     public enum Systemstate{
         IDLE,
         INTAKE,

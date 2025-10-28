@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
+
 import android.telephony.IccOpenLogicalChannelResponse;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -67,6 +69,7 @@ public class SOLO extends OpMode {
     @Override
     public void loop() {
         //robot.clearBulkCache();
+        setVoltage(()-> hardwareMap.voltageSensor.iterator().next().getVoltage());
 
         Superstructure.drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, -gamepad1.right_stick_x,new Rotation2d(Superstructure.drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
 
@@ -76,13 +79,9 @@ public class SOLO extends OpMode {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
         }
 
-        if(gamepad1.right_trigger>0.5){
-            Superstructure.intake.setIntakeState(Intake.Systemstate.INTAKE);
-        } else if (gamepad1.left_trigger>0.5) {
-            Superstructure.intake.setIntakeState(Intake.Systemstate.EXHAUST);
-        }else{
-            Superstructure.intake.setIntakeState(Intake.Systemstate.IDLE);
 
+        if (gamepad1.right_trigger>0.5) {
+            Superstructure.setCurrentWantedState(Superstructure.wantedState.INTAKE);
         }
 
 
@@ -102,9 +101,28 @@ public class SOLO extends OpMode {
 //        telemetry.addData("VisionX",robopose.getX());
 //        telemetry.addData("VisionY",robopose.getY());
 //        telemetry.addData("Heading",robopose.getRotation().getDegrees());
-        telemetry.addData("red",Superstructure.revolver.rightSensor.getNormalizedColors().red);
-        telemetry.addData("green",Superstructure.revolver.rightSensor.getNormalizedColors().green);
-        telemetry.addData("blue",Superstructure.revolver.rightSensor.getNormalizedColors().blue);
+//        telemetry.addData("current slot",Superstructure.revolver.currentSlot);
+        telemetry.addData("slot1 ball",Superstructure.revolver.slot1.IsthereBall());
+        telemetry.addData("slot1 color",Superstructure.revolver.slot1.getColor());
+        telemetry.addData("slot2 ball",Superstructure.revolver.slot2.IsthereBall());
+        telemetry.addData("slot2 color",Superstructure.revolver.slot2.getColor());
+        telemetry.addData("slot3 ball",Superstructure.revolver.slot3.IsthereBall());
+        telemetry.addData("slot3 color",Superstructure.revolver.slot3.getColor());
+//        telemetry.addData("feeder distance",Superstructure.revolver.feederSensor.getDistance(DistanceUnit.MM));
+//        telemetry.addData("feeder red",Superstructure.revolver.feederSensor.getNormalizedColors().red);
+//        telemetry.addData("feeder green",Superstructure.revolver.feederSensor.getNormalizedColors().green);
+//        telemetry.addData("feeder blue",Superstructure.revolver.feederSensor.getNormalizedColors().blue);
+//        telemetry.addData("feeder color",Superstructure.revolver.currentFeeederColor.name());
+        telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
+        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
+        telemetry.addData("revolver target pose",Superstructure.revolver.RevolverController.getTargetPosition());
+        telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
+
+
+
+
+
+
 
 
         Superstructure.read();
