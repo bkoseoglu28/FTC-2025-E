@@ -101,13 +101,13 @@ public class SOLO extends OpMode {
 //        telemetry.addData("VisionX",robopose.getX());
 //        telemetry.addData("VisionY",robopose.getY());
 //        telemetry.addData("Heading",robopose.getRotation().getDegrees());
-//        telemetry.addData("current slot",Superstructure.revolver.currentSlot);
-        telemetry.addData("slot1 ball",Superstructure.revolver.slot1.IsthereBall());
-        telemetry.addData("slot1 color",Superstructure.revolver.slot1.getColor());
-        telemetry.addData("slot2 ball",Superstructure.revolver.slot2.IsthereBall());
-        telemetry.addData("slot2 color",Superstructure.revolver.slot2.getColor());
-        telemetry.addData("slot3 ball",Superstructure.revolver.slot3.IsthereBall());
-        telemetry.addData("slot3 color",Superstructure.revolver.slot3.getColor());
+////        telemetry.addData("current slot",Superstructure.revolver.currentSlot);
+//        telemetry.addData("slot1 ball",Superstructure.revolver.slot1.IsthereBall());
+//        telemetry.addData("slot1 color",Superstructure.revolver.slot1.getColor());
+//        telemetry.addData("slot2 ball",Superstructure.revolver.slot2.IsthereBall());
+//        telemetry.addData("slot2 color",Superstructure.revolver.slot2.getColor());
+//        telemetry.addData("slot3 ball",Superstructure.revolver.slot3.IsthereBall());
+//        telemetry.addData("slot3 color",Superstructure.revolver.slot3.getColor());
 //        telemetry.addData("feeder distance",Superstructure.revolver.feederSensor.getDistance(DistanceUnit.MM));
 //        telemetry.addData("feeder red",Superstructure.revolver.feederSensor.getNormalizedColors().red);
 //        telemetry.addData("feeder green",Superstructure.revolver.feederSensor.getNormalizedColors().green);
@@ -117,6 +117,9 @@ public class SOLO extends OpMode {
         telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
         telemetry.addData("revolver target pose",Superstructure.revolver.RevolverController.getTargetPosition());
         telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
+        telemetry.addData("ty",Superstructure.vision.ty);
+
+
 
 
 

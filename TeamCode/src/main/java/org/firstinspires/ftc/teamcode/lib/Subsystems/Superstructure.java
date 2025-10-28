@@ -116,7 +116,7 @@ public class Superstructure {
 //        turret.setTurretAngle(FieldAprilTags.TAG_20.toPose2d().getTranslation().minus(turrettorobot).getAngle().getDegrees());
         double robotangularvel = drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS);
 
-        double velcompdegrees = -0.19*Units.radiansToDegrees(robotangularvel);
+        double velcompdegrees = -0.213*Units.radiansToDegrees(robotangularvel);
 
         double compensatetx = -vision.tx+ velcompdegrees;
         double lastknownangle = 37;
@@ -133,8 +133,7 @@ public class Superstructure {
 
 
 
-        //hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
-        hood.setHoodAngle(setpointHood);
+        hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
 
         switch (currentSystemState){
             case IDLE:
@@ -146,8 +145,7 @@ public class Superstructure {
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
                 break;
             case AIMING:
-                flywheel.setSetpointRPM(setpointRPM);
-                //flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+                flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 ready = flywheel.IsAtSetpoint()&& hood.IsAtSetpoint();
