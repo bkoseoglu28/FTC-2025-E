@@ -28,6 +28,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
+
 @Config
 public class Superstructure {
     public static double setpointRPM=0;
@@ -49,6 +51,11 @@ public class Superstructure {
     public static int revolverTarget=-120;
     static RevBlinkinLedDriver LEDS;
     public static boolean ready;
+    public static double lastknownangle = -37;
+    static double filteredTx=0;
+    static double mT=0;
+    static double hint=0;
+    static double turretHintAdjustment=30;
 
 
 
@@ -114,32 +121,65 @@ public class Superstructure {
 //        Translation2d robotToTurret = new Translation2d(-65.0/1000, 0);
 //        Translation2d turrettorobot=drivetrain.OdometryModule.getPose2d().getTranslation().plus(robotToTurret);
 //        turret.setTurretAngle(FieldAprilTags.TAG_20.toPose2d().getTranslation().minus(turrettorobot).getAngle().getDegrees());
+
         double robotangularvel = drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS);
 
         double velcompdegrees = -0.213*Units.radiansToDegrees(robotangularvel);
-
-        double compensatetx = -vision.tx+ velcompdegrees;
-        double lastknownangle = 37;
+        filteredTx = 0.2 * vision.tx + (1 - 0.2) * filteredTx;
+        double compensatetx = -filteredTx+ velcompdegrees;
         double error;
         if(vision.tv){
             error= turret.getTurretAngle()+compensatetx;
-            error= new Rotation2d(Units.degreesToRadians(error)).getDegrees();
+            error= new Rotation2d(Units.degreesToRadians(error)).getDegrees()+ (Timer.getFPGATimestamp() -mT) * -Units.radiansToDegrees(robotangularvel);
+            mT=Timer.getFPGATimestamp();
             turret.setTurretAngle(error);
-            lastknownangle= turret.getTurretAngle()+drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
+            lastknownangle=error+drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
         }else{
-            turret.setTurretAngle(lastknownangle-drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES));
+            if(turret.getTurretAngle()>=120){
+                hint=-30;
+            }else if(turret.getTurretAngle()<=-120){
+                hint=30;
+            }
+            turretHintAdjustment=turret.getTurretAngle();
+            turretHintAdjustment+=hint;
+            turret.setTurretAngle(turretHintAdjustment);
         }
-
-
-
 
         hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
 
         switch (currentSystemState){
             case IDLE:
+                if(revolver.startVibrating){
+                    revolver.setVibration(5,45);
+                }else{
+                    if(revolver.currentSlot.IsthereBall()){
+                        revolverTarget= (int) revolver.currentSlot.getAngle();
+                    }else{
+                        if(revolver.currentSlot==revolver.slot1){
+                            if(revolver.slot2.IsthereBall()){
+                                revolverTarget= (int) revolver.slot2.getAngle();
+                            }else if (revolver.slot3.IsthereBall()){
+                                revolverTarget= (int) revolver.slot3.getAngle();
+                            }
+                        } else if (revolver.currentSlot==revolver.slot2) {
+                            if(revolver.slot1.IsthereBall()){
+                                revolverTarget= (int) revolver.slot1.getAngle();
+                            }else if (revolver.slot3.IsthereBall()){
+                                revolverTarget= (int) revolver.slot3.getAngle();
+                            }
+                        } else if (revolver.currentSlot==revolver.slot3) {
+                            if(revolver.slot1.IsthereBall()){
+                                revolverTarget= (int) revolver.slot1.getAngle();
+                            }else if (revolver.slot2.IsthereBall()){
+                                revolverTarget= (int) revolver.slot2.getAngle();
+                            }
+                        }
+                    }
+                    revolver.stopVibration();
+                    revolver.startedTime=0;
+                }
                 //turret.setTurretAngle(0);
                 flywheel.setSetpointRPM(1500);
-                //revolver.setRevolverAngle(revolverTarget);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
@@ -261,16 +301,16 @@ public class Superstructure {
 
     public static void write() {
         feeder.write();
-//        flywheel.write();
-//        hood.write();
+        flywheel.write();
+        hood.write();
         revolver.write();
-        //turret.write();
+        turret.write();
         vision.write();
         drivetrain.write();
         intake.write();
     }
 
-    public void reset() {
+    public static void reset() {
         feeder.reset();
         flywheel.reset();
         hood.reset();

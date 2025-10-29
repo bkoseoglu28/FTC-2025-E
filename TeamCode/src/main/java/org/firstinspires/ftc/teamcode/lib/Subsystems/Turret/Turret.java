@@ -24,18 +24,17 @@ import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.Util;
-@Config
+
 public class Turret extends WSubsystem {
-    public static double kp;
-    public static double ki;
-    public static double kd;
+//    public static double kp=0;
+//    public static double ki=0;
+//    public static double kd=0;
+//    public static double feedforward=0;
 
     DcMotorEx turretMotor;
     WEncoder TurretEncoder;
     WActuatorGroup TurretController;
     PIDController visionPID;
-    SimpleMotorFeedforward feedfwrd;
-
 
     @Override
     public void init(HardwareMap hardwareMap) {
@@ -45,11 +44,10 @@ public class Turret extends WSubsystem {
         TurretEncoder = new WEncoder(new MotorEx(hardwareMap, "turretMotor").encoder);
 
         TurretController = new WActuatorGroup(this::getTurretAngle,turretMotor)
-                .setPIDController(new PIDController(0.0045,0,0.0002))
-                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0);
+                .setPIDController(new PIDController(0.0125,0.006,0.00016))
+                .setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,0.04);
         TurretEncoder.encoder.reset();
         visionPID = new PIDController(0,0,0);
-        feedfwrd= new SimpleMotorFeedforward(0,0,0);
     }
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(getTurretAngle(),TurretController.getTargetPosition(),10);
@@ -81,8 +79,8 @@ public class Turret extends WSubsystem {
 
     @Override
     public void periodic() {
-        //TurretController.setPID(kp,ki,kd);
-        //TurretController.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,ff());
+//        TurretController.setPID(kp,ki,kd);
+//        TurretController.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,feedforward);
         TurretController.periodic();
     }
     public void setVoltage(DoubleSupplier voltage){

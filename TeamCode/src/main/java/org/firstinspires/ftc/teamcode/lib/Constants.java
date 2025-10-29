@@ -12,7 +12,7 @@ public class Constants {
 
         };
         public static double[][] kHoodValues = {
-                {9.78,15},
+                {9.78,11},//15
                 {-6.30,26},
                 {-13.08,15},
                 {-15.39,11}

@@ -43,6 +43,9 @@ public class Vision extends WSubsystem {
         NULL
     }
 
+    Translation2d camera_to_turret = new Translation2d(0.16,0.0);
+    Translation2d turret_to_robot = new Translation2d(0.11,0.0);
+
     @Override
     public void init(HardwareMap hardwareMap) {
         LL3 = hardwareMap.get(Limelight3A.class,"limelight");
@@ -69,14 +72,30 @@ public class Vision extends WSubsystem {
             this.ty= results.getTy();
             this.tv =results.isValid();
             if(!results.getFiducialResults().isEmpty()){
-                Position pose = new Position();
+                double currentTurretAngle = Superstructure.turret.getTurretAngle();
+                Rotation2d turretRot = Rotation2d.fromDegrees(currentTurretAngle);
+                Translation2d rotatedLimeOffset= camera_to_turret.rotateBy(turretRot);
+                Translation2d cameraRobotOfset = turret_to_robot.plus(rotatedLimeOffset);
+
+                //Position pose = new Position();
+
                 this.cameratofieldPose= new Pose2d(new Translation2d(
                         results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.METER).x,
                         results.getFiducialResults().get(0).getCameraPoseTargetSpace().getPosition().toUnit(DistanceUnit.METER).y),
                         new Rotation2d(results.getFiducialResults().get(0).getCameraPoseTargetSpace().getOrientation().getYaw(AngleUnit.RADIANS)));
                 this.ApriltagID=results.getFiducialResults().get(0).getFiducialId();
+
+                Rotation2d cameratorobotcenterRot = turretRot.unaryMinus();
+                Transform2d cameratorobottrans = new Transform2d(cameraRobotOfset,cameratorobotcenterRot);
+
+                Pose2d tagPose = FieldAprilTags.TAG_20.toPose2d();
+                Transform2d tagtoCamera = new Transform2d(this.cameratofieldPose.getTranslation(),this.cameratofieldPose.getRotation());
+
+                Rotation2d correctRot = tagtoCamera.getRotation().plus(turretRot.unaryMinus());
+
+                this.robotPose = tagPose.transformBy(tagtoCamera).transformBy(cameratorobottrans);
                 //this.robotPose=getRobotToField(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())),Superstructure.drivetrain.OdometryModule.getRotation2d());
-                this.robotPose=getRobotPoseFromTurretCameraPose(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())));
+                //this.robotPose=getRobotPoseFromTurretCameraPose(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())));
 
             }
             if(ApriltagID==21){
@@ -88,8 +107,7 @@ public class Vision extends WSubsystem {
             }
         }
     }
-    public Pose2d getRobotToField(
-            Pose2d visionPose, Pose3d tag, Rotation2d turretAngle, Rotation2d robotOrientation) {
+    public Pose2d getRobotToField(Pose2d visionPose, Pose3d tag, Rotation2d turretAngle, Rotation2d robotOrientation) {
 
         // Remove the inherit rotation in the apriltag pose.
         Pose2d tag2d = new Pose2d(tag.toPose2d().getTranslation(), new Rotation2d());
@@ -114,11 +132,7 @@ public class Vision extends WSubsystem {
 
         return new Pose2d(robotToTagTranslation, robotOrientation);
     }
-    protected synchronized Pose2d getRobotPoseFromCameraPose(
-            Pose2d cameraPose,
-            Pose2d odometryPose,
-            Rotation2d turretAngle,
-            Pose3d tag) {
+    protected synchronized Pose2d getRobotPoseFromCameraPose(Pose2d cameraPose, Pose2d odometryPose, Rotation2d turretAngle, Pose3d tag) {
 
         Pose3d tagCoords = tag;
         Rotation2d fieldRelativeRobotOrientation = odometryPose.getRotation();

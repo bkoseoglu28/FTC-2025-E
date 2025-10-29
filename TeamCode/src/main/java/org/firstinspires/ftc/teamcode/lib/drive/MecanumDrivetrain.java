@@ -153,11 +153,12 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
     @Override
     public void reset() {
         OdometryModule.resetPosAndIMU();
-        if(Superstructure.vision.robotPose!=null){
-            OdometryModule.resetPose(Superstructure.vision.robotPose);
-        }else{
+//        if(Superstructure.vision.robotPose!=null){
+//            OdometryModule.resetPose(Superstructure.vision.robotPose);
+//        }else{
+//            OdometryModule.resetPose(new Pose2d(new Translation2d(1.5,1.5),new Rotation2d()));
+//        }
             OdometryModule.resetPose(new Pose2d(new Translation2d(1.5,1.5),new Rotation2d()));
-        }
 
         OdometryModule.recalibrateIMU();
     }

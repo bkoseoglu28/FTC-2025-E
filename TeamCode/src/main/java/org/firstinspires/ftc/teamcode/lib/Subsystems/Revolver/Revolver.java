@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.lib.Subsystems.Revolver;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
-import com.acmerobotics.dashboard.config.Config;
 import com.arcrobotics.ftclib.hardware.motors.MotorEx;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -11,7 +8,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.lib.Sensors;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
@@ -20,13 +16,8 @@ import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.util.Util;
-@Config
+
 public class Revolver extends WSubsystem {
-    public static double kp=0.022;
-    public static double ki=0;
-    public static double kd=0.00035;
-    public static double feedwrd=0;
     DcMotorEx revolverMotor;
     WEncoder RevolverEncoder;
     public WActuatorGroup RevolverController;
@@ -39,6 +30,8 @@ public class Revolver extends WSubsystem {
     public colors currentFeeederColor= colors.UNKNOWN;
 
     public Slot currentSlot;
+    public boolean startVibrating=false;
+    public double startedTime;
 
     public int sensorIndex=0;
     public enum colors{
@@ -75,12 +68,23 @@ public class Revolver extends WSubsystem {
         RevolverController.getController().setTolerance(25);
         return RevolverController.getController().atSetpoint();
     }
+    double vibrationHz = 0.0;
+    double vibrationAmplitude = 0.0;
+    public void stopVibration() {
+        startVibrating = false;
+        vibrationHz = 0.0;
+        vibrationAmplitude = 0.0;
+        startedTime = 0.0;
+    }
+    public void setVibrating(boolean st){
+        if(startVibrating!=st){
+            startVibrating=st;
+        }
+    }
     public Rotation2d getRevolverAngle(){
         double encoderRots= RevolverEncoder.getPosition();
 
         return new Rotation2d(encoderRots*(1.0/((((1+(46.0/17))) * (1+(46/17.0))) * (1+(46.0/17)) * 28))*(16.0/30.0)*2*Math.PI);
-
-
     }
     public void handleShooterSensor(){
         if(shooterSensor.getDistance(DistanceUnit.MM)>30){
@@ -92,6 +96,16 @@ public class Revolver extends WSubsystem {
         }
 
     }
+    public void setVibration(double hz,double angle){
+        vibrationHz = hz;
+        vibrationAmplitude = angle;
+        if(startedTime==0){
+            startedTime=System.nanoTime() / 1e9;
+        }
+        double t = (System.nanoTime() / 1e9) - startedTime; // seconds since start
+        setRevolverAngle(getRevolverAngle().getDegrees() + angle * Math.sin(2 * Math.PI * hz * t));
+    }
+
     public void setVoltage(DoubleSupplier voltage){
         RevolverController.setVoltageSupplier(voltage);
     }
@@ -171,13 +185,12 @@ public class Revolver extends WSubsystem {
     }
     @Override
     public void periodic() {
-        RevolverController.setFeedforward(WActuatorGroup.FeedforwardMode.CONSTANT,feedwrd);
-        RevolverController.setPID(kp,ki,kd);
         RevolverController.periodic();
     }
 
     @Override
     public void read() {
+
         setSlots(RevolverController.getTargetPosition());
         getLeftColor();
         getFeederColor();

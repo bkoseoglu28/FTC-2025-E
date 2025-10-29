@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.revolver;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.turret;
 
 import android.telephony.IccOpenLogicalChannelResponse;
 
@@ -38,6 +39,7 @@ import org.firstinspires.ftc.teamcode.lib.Subsystems.Feeder.Feeder;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.FieldAprilTags;
+import org.firstinspires.ftc.teamcode.lib.joysticklib.Toggle;
 import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
 import org.firstinspires.ftc.teamcode.wrappers.WVelocityGroup;
@@ -51,18 +53,21 @@ import edu.wpi.first.math.util.Units;
 @Config
 @TeleOp(name = "SOLO")
 public class SOLO extends OpMode {
-    FtcDashboard dashboard;
+    static FtcDashboard dashboard;
     public static double targetRPM=0;
     public static double hoodAngle=0;
     Pose2d robopose = new Pose2d();
     double target = 0;
     boolean shoot = false;
+    Toggle vibrator;
 
 
     @Override
     public void init() {
         Superstructure.init(hardwareMap);
+        Superstructure.reset();
 
+        vibrator=new Toggle(false);
         dashboard = FtcDashboard.getInstance();
         telemetry = dashboard.getTelemetry();
     }
@@ -79,13 +84,13 @@ public class SOLO extends OpMode {
         }else if (gamepad1.cross) {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
         }
-        if (gamepad1.dpad_up) {
-            revolver.RevolverController.setTargetPosition(0);
-        }else if (gamepad1.dpad_left) {
-            revolver.RevolverController.setTargetPosition(-120);
-        }else if (gamepad1.dpad_right) {
-            revolver.RevolverController.setTargetPosition(120);
-        }
+//        if (gamepad1.dpad_up) {
+//            turret.setTurretAngle(0);
+//        }else if (gamepad1.dpad_left) {
+//            turret.setTurretAngle(-90);
+//        }else if (gamepad1.dpad_right) {
+//            turret.setTurretAngle(90);
+//        }
 
 
 
@@ -96,7 +101,8 @@ public class SOLO extends OpMode {
         if(Superstructure.vision.robotPose!=null){
             robopose =Superstructure.vision.robotPose;
         }
-
+        vibrator.update(gamepad1.ps);
+        revolver.setVibrating(vibrator.getState());
 //        telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
 //        telemetry.addData("hood angle",Superstructure.hood.getHoodAngle());
 //        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
@@ -122,12 +128,15 @@ public class SOLO extends OpMode {
 //        telemetry.addData("feeder blue",Superstructure.revolver.feederSensor.getNormalizedColors().blue);
 //        telemetry.addData("feeder color",Superstructure.revolver.currentFeeederColor.name());
         telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
+        telemetry.addData("turret Angle",Superstructure.turret.getTurretAngle());
         telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
+        telemetry.addData("heading",Superstructure.drivetrain.OdometryModule.getRotation2d().getDegrees());
+//        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
         telemetry.addData("revolver target pose",Superstructure.revolver.RevolverController.getTargetPosition());
-        telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
+//        telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
         telemetry.addData("ty",Superstructure.vision.ty);
 
-
+        sendPoseToDashboard(robopose);
 
 
 
@@ -142,4 +151,27 @@ public class SOLO extends OpMode {
 
 
     }
+    public static void sendPoseToDashboard(Pose2d pose) {
+        TelemetryPacket packet = new TelemetryPacket();
+
+        // Add pose data as telemetry fields
+        packet.put("x", DistanceUnit.INCH.fromMeters(pose.getX()));
+        packet.put("y", DistanceUnit.INCH.fromMeters(pose.getY()));
+        packet.put("heading (deg)", Math.toDegrees(pose.getRotation().getRadians()));
+
+        // Optionally draw the robot on the field overlay
+        packet.fieldOverlay()
+                .setStroke("blue")
+                .strokeCircle(DistanceUnit.INCH.fromMeters(pose.getX()), DistanceUnit.INCH.fromMeters(pose.getY()), 5)
+                .setStroke("red")
+                .strokeLine(
+                        DistanceUnit.INCH.fromMeters(pose.getX()),
+                        DistanceUnit.INCH.fromMeters(pose.getY()),
+                        pose.getX() + 10 * Math.cos(pose.getRotation().getRadians()),
+                        pose.getY() + 10 * Math.sin(pose.getRotation().getRadians())
+                );
+
+        dashboard.sendTelemetryPacket(packet);
+    }
 }
+
