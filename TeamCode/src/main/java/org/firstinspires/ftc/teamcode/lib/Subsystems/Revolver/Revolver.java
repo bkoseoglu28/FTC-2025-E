@@ -87,11 +87,6 @@ public class Revolver extends WSubsystem {
             manualadjust=ma;
         }
     }
-
-    public boolean isEmpty(){
-        return !slot1.IsthereBall()&&!slot2.IsthereBall()&&!slot3.IsthereBall();
-    }
-    
     public Rotation2d getRevolverAngle(){
         double encoderRots= RevolverEncoder.getPosition();
 
