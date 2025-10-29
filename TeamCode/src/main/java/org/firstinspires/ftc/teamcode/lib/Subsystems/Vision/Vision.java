@@ -43,8 +43,8 @@ public class Vision extends WSubsystem {
         NULL
     }
 
-    Translation2d camera_to_turret = new Translation2d(0.16,0.0);
-    Translation2d turret_to_robot = new Translation2d(0.11,0.0);
+    Translation2d camera_to_turret = new Translation2d(0.16277,0);
+    Translation2d turret_to_robot = new Translation2d(-0.065,0);
 
     @Override
     public void init(HardwareMap hardwareMap) {
@@ -88,15 +88,14 @@ public class Vision extends WSubsystem {
                 Rotation2d cameratorobotcenterRot = turretRot.unaryMinus();
                 Transform2d cameratorobottrans = new Transform2d(cameraRobotOfset,cameratorobotcenterRot);
 
-                Pose2d tagPose = FieldAprilTags.TAG_20.toPose2d();
-                Transform2d tagtoCamera = new Transform2d(this.cameratofieldPose.getTranslation(),this.cameratofieldPose.getRotation());
+                Transform2d tagToCamera = toTransform2D(this.cameratofieldPose);
 
-                Rotation2d correctRot = tagtoCamera.getRotation().plus(turretRot.unaryMinus());
+                //Transform2d robotToTagTrans = inverse(tagToRobotTrans);
+                Pose2d camOnfield=FieldAprilTags.TAG_20.toPose2d().transformBy(tagToCamera.inverse());
+//                Translation2d newTrans = tagPose.getTranslation().plus(robotToTagTrans.getTranslation().rotateBy(tagPose.getRotation()));
+//                Rotation2d newRot = tagPose.getRotation().plus(robotToTagTrans.getRotation());
 
-                this.robotPose = tagPose.transformBy(tagtoCamera).transformBy(cameratorobottrans);
-                //this.robotPose=getRobotToField(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())),Superstructure.drivetrain.OdometryModule.getRotation2d());
-                //this.robotPose=getRobotPoseFromTurretCameraPose(cameratofieldPose,FieldAprilTags.TAG_20,new Rotation2d(Units.degreesToRadians(Superstructure.turret.getTurretAngle())));
-
+                this.robotPose = camOnfield.transformBy(cameratorobottrans);//.transformBy(cameratorobottrans.inverse());
             }
             if(ApriltagID==21){
                 this.currentObelisk=Obelisk.GPP;
@@ -106,6 +105,28 @@ public class Vision extends WSubsystem {
                 this.currentObelisk=Obelisk.PPG;
             }
         }
+    }
+
+    public static Pose2d toPose2D(Pose3d pose3d){
+        return new Pose2d(new Translation2d(pose3d.getX(),pose3d.getY()),
+                new Rotation2d(pose3d.getRotation().getZ()));
+    }
+    public static Transform2d toTransform2D(Pose2d pose2d){
+        return new Transform2d(pose2d.getTranslation(),pose2d.getRotation());
+    }
+    public static Transform2d transformByy(Transform2d transA, Transform2d transB){
+        Translation2d newTrans = transA.getTranslation().plus(transB.getTranslation().rotateBy(transA.getRotation()));
+        Rotation2d newRot = transA.getRotation().plus(transB.getRotation());
+        return new Transform2d(newTrans,newRot);
+    }
+
+    public static Transform2d inverse(Transform2d transform){
+        Rotation2d inversRot = transform.getRotation().unaryMinus();
+
+        Translation2d inversTrans = transform.getTranslation().unaryMinus().rotateBy(inversRot);
+
+        return new Transform2d(inversTrans,inversRot);
+
     }
     public Pose2d getRobotToField(Pose2d visionPose, Pose3d tag, Rotation2d turretAngle, Rotation2d robotOrientation) {
 

@@ -55,9 +55,8 @@ public class Superstructure {
     static double filteredTx=0;
     static double mT=0;
     static double hint=0;
-    static double turretHintAdjustment=30;
-
-
+    static double turretHintAdjustment=27;
+    public static boolean panic;
 
     public static enum systemState{
         IDLE,
@@ -83,7 +82,13 @@ public class Superstructure {
         intake.init(hardwareMap);
         hardwaremap=hardwareMap;
         LEDS = hardwareMap.get(RevBlinkinLedDriver.class, "ledDriver");
+    }
+    public static void setPanic(boolean pc) {
+        panic = pc;
+    }
 
+    public static boolean isPanic() {
+        return panic;
     }
     public static void setCurrentSystemState(systemState st){
         if(currentSystemState!=st)currentSystemState=st;
@@ -91,7 +96,6 @@ public class Superstructure {
     public static void setCurrentWantedState(wantedState st){
         if(currentWatedState!=st)currentWatedState=st;
     }
-
 
     public static void periodic() {
         switch (currentWatedState){
@@ -108,6 +112,44 @@ public class Superstructure {
                 setCurrentSystemState(systemState.IDLE);
                 break;
         }
+        if(revolver.currentSlot.IsthereBall()){
+            if(!revolver.startVibrating&&!revolver.manualadjust){
+                revolver.stopVibration();
+                revolver.startedTime=0;
+                revolverTarget = (int) revolver.currentSlot.getAngle();
+                revolver.setRevolverAngle(revolverTarget);
+            } else if (revolver.manualadjust&&!revolver.startVibrating) {
+                revolverTarget= (int) revolver.currentSlot.getAngle()+120;
+                revolver.stopVibration();
+                revolver.startedTime=0;
+                revolver.setRevolverAngle(revolverTarget);
+            } else{
+                revolver.setVibration(5,45);
+            }
+        }else{
+            if(revolver.currentSlot==revolver.slot1){
+                if(revolver.slot2.IsthereBall()){
+                    revolverTarget= (int) revolver.slot2.getAngle();
+                }else if (revolver.slot3.IsthereBall()){
+                    revolverTarget= (int) revolver.slot3.getAngle();
+                }
+            } else if (revolver.currentSlot==revolver.slot2) {
+                if(revolver.slot1.IsthereBall()){
+                    revolverTarget= (int) revolver.slot1.getAngle();
+                }else if (revolver.slot3.IsthereBall()){
+                    revolverTarget= (int) revolver.slot3.getAngle();
+                }
+            } else if (revolver.currentSlot==revolver.slot3) {
+                if(revolver.slot1.IsthereBall()){
+                    revolverTarget= (int) revolver.slot1.getAngle();
+                }else if (revolver.slot2.IsthereBall()){
+                    revolverTarget= (int) revolver.slot2.getAngle();
+                }
+            }
+            revolver.setRevolverAngle(revolverTarget);
+        }
+
+
         Rotation2d fieldTurretAngle = new Rotation2d(Units.degreesToRadians(turret.getTurretAngle())).minus(new Rotation2d(Units.degreesToRadians(vision.tx)));
 
 // Vision hedefini world-relative hale getir
@@ -125,8 +167,8 @@ public class Superstructure {
         double robotangularvel = drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS);
 
         double velcompdegrees = -0.213*Units.radiansToDegrees(robotangularvel);
-        filteredTx = 0.2 * vision.tx + (1 - 0.2) * filteredTx;
-        double compensatetx = -filteredTx+ velcompdegrees;
+        filteredTx = 0.1 * vision.tx + (1 - 0.1) * filteredTx;
+        double compensatetx = -vision.tx*0.7+ velcompdegrees;
         double error;
         if(vision.tv){
             error= turret.getTurretAngle()+compensatetx;
@@ -136,9 +178,9 @@ public class Superstructure {
             lastknownangle=error+drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
         }else{
             if(turret.getTurretAngle()>=120){
-                hint=-30;
+                hint=-27;
             }else if(turret.getTurretAngle()<=-120){
-                hint=30;
+                hint=27;
             }
             turretHintAdjustment=turret.getTurretAngle();
             turretHintAdjustment+=hint;
@@ -146,38 +188,17 @@ public class Superstructure {
         }
 
         hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+//        hood.setHoodAngle(setpointHood);
+
 
         switch (currentSystemState){
             case IDLE:
-                if(revolver.startVibrating){
-                    revolver.setVibration(5,45);
-                }else{
-                    if(revolver.currentSlot.IsthereBall()){
-                        revolverTarget= (int) revolver.currentSlot.getAngle();
-                    }else{
-                        if(revolver.currentSlot==revolver.slot1){
-                            if(revolver.slot2.IsthereBall()){
-                                revolverTarget= (int) revolver.slot2.getAngle();
-                            }else if (revolver.slot3.IsthereBall()){
-                                revolverTarget= (int) revolver.slot3.getAngle();
-                            }
-                        } else if (revolver.currentSlot==revolver.slot2) {
-                            if(revolver.slot1.IsthereBall()){
-                                revolverTarget= (int) revolver.slot1.getAngle();
-                            }else if (revolver.slot3.IsthereBall()){
-                                revolverTarget= (int) revolver.slot3.getAngle();
-                            }
-                        } else if (revolver.currentSlot==revolver.slot3) {
-                            if(revolver.slot1.IsthereBall()){
-                                revolverTarget= (int) revolver.slot1.getAngle();
-                            }else if (revolver.slot2.IsthereBall()){
-                                revolverTarget= (int) revolver.slot2.getAngle();
-                            }
-                        }
-                    }
-                    revolver.stopVibration();
-                    revolver.startedTime=0;
-                }
+//                if(revolver.startVibrating){
+//                    revolver.setVibration(5,45);
+//                }else{
+//                    revolver.stopVibration();
+//                    revolver.startedTime=0;
+//                }
                 //turret.setTurretAngle(0);
                 flywheel.setSetpointRPM(1500);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
@@ -186,48 +207,26 @@ public class Superstructure {
                 break;
             case AIMING:
                 flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+//                flywheel.setSetpointRPM(setpointRPM);
+
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 ready = flywheel.IsAtSetpoint()&& hood.IsAtSetpoint();
                     if(ready){
                         setCurrentSystemState(systemState.SHOOTING);
                     }
-                    if(revolver.currentSlot.IsthereBall()){
-                        revolverTarget= (int) revolver.currentSlot.getAngle();
-                    }else{
-                       if(revolver.currentSlot==revolver.slot1){
-                           if(revolver.slot2.IsthereBall()){
-                               revolverTarget= (int) revolver.slot2.getAngle();
-                           }else if (revolver.slot3.IsthereBall()){
-                               revolverTarget= (int) revolver.slot3.getAngle();
-                           }
-                       } else if (revolver.currentSlot==revolver.slot2) {
-                           if(revolver.slot1.IsthereBall()){
-                               revolverTarget= (int) revolver.slot1.getAngle();
-                           }else if (revolver.slot3.IsthereBall()){
-                               revolverTarget= (int) revolver.slot3.getAngle();
-                           }
-                       } else if (revolver.currentSlot==revolver.slot3) {
-                           if(revolver.slot1.IsthereBall()){
-                               revolverTarget= (int) revolver.slot1.getAngle();
-                           }else if (revolver.slot2.IsthereBall()){
-                               revolverTarget= (int) revolver.slot2.getAngle();
-                           }
-                       }
-                    }
-                revolver.setRevolverAngle(revolverTarget);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE);
                 break;
             case SHOOTING:
                     if(revolver.sensorIndex==2){
                         setCurrentSystemState(systemState.AIMING);
                     }
-
-                revolver.setRevolverAngle(revolverTarget);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
                 flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+//                flywheel.setSetpointRPM(setpointRPM);
                 feeder.setFeederState(Feeder.Systemstate.FEED);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
+
                 break;
             case INTAKING:
 //                if(revolver.IsAtSetpoint()){
@@ -241,40 +240,15 @@ public class Superstructure {
 //                }else if(!revolver.slot1.IsthereBall()&&!revolver.slot2.IsthereBall()&&revolver.slot3.IsthereBall()){
 //                    revolverTarget= (int) revolver.slot3.getAngle();
 //                }}
-                if(revolver.currentSlot.IsthereBall()){
-                    revolverTarget= (int) revolver.currentSlot.getAngle();
-                }else{
-                    if(revolver.currentSlot==revolver.slot1){
-                        if(revolver.slot2.IsthereBall()){
-                            revolverTarget= (int) revolver.slot2.getAngle();
-                        }else if (revolver.slot3.IsthereBall()){
-                            revolverTarget= (int) revolver.slot3.getAngle();
-                        }else{
-                            revolverTarget= (int) revolver.slot1.getAngle();
-                        }
-                    } else if (revolver.currentSlot==revolver.slot2) {
-                        if(revolver.slot1.IsthereBall()){
-                            revolverTarget= (int) revolver.slot1.getAngle();
-                        }else if (revolver.slot3.IsthereBall()){
-                            revolverTarget= (int) revolver.slot3.getAngle();
-                        }else{
-                            revolverTarget= (int) revolver.slot2.getAngle();
-                        }
-                    } else if (revolver.currentSlot==revolver.slot3) {
-                        if(revolver.slot1.IsthereBall()){
-                            revolverTarget= (int) revolver.slot1.getAngle();
-                        }else if (revolver.slot2.IsthereBall()){
-                            revolverTarget= (int) revolver.slot2.getAngle();
-                        }else{
-                            revolverTarget= (int) revolver.slot3.getAngle();
-                        }
-                    }}
-                revolver.setRevolverAngle(revolverTarget);
-                LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.VIOLET);
                 flywheel.setSetpointRPM(1500);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
-                intake.setIntakeState(Intake.Systemstate.INTAKE);
-
+                if(isPanic()){
+                    intake.setIntakeState(Intake.Systemstate.EXHAUST);
+                    LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.HOT_PINK);
+                }else {
+                    intake.setIntakeState(Intake.Systemstate.INTAKE);
+                    LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.VIOLET);
+                }
                 break;
         }
         feeder.periodic();

@@ -32,6 +32,7 @@ public class Revolver extends WSubsystem {
     public Slot currentSlot;
     public boolean startVibrating=false;
     public double startedTime;
+    public boolean manualadjust=false;
 
     public int sensorIndex=0;
     public enum colors{
@@ -81,6 +82,16 @@ public class Revolver extends WSubsystem {
             startVibrating=st;
         }
     }
+    public void setManualAdjust(boolean ma){
+        if(manualadjust!=ma){
+            manualadjust=ma;
+        }
+    }
+
+    public boolean isEmpty(){
+        return !slot1.IsthereBall()&&!slot2.IsthereBall()&&!slot3.IsthereBall();
+    }
+    
     public Rotation2d getRevolverAngle(){
         double encoderRots= RevolverEncoder.getPosition();
 
