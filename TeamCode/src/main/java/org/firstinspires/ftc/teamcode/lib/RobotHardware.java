@@ -305,11 +305,11 @@ public class RobotHardware {
         }
 
         OdometryModule.resetPosAndIMU();
-        if(vision.robotPose!=null){
-            OdometryModule.resetPose(vision.robotPose);
-        }else{
-            OdometryModule.resetPose(new Pose2d());
-        }
+//        if(vision.robotPose!=null){
+//            OdometryModule.resetPose(vision.robotPose);
+//        }else{
+//            OdometryModule.resetPose(new Pose2d());
+//        }
 
         OdometryModule.recalibrateIMU();
         vision.reset();

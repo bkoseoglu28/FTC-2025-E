@@ -26,6 +26,7 @@ import java.util.function.DoubleSupplier;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
@@ -95,6 +96,30 @@ public class Superstructure {
     }
     public static void setCurrentWantedState(wantedState st){
         if(currentWatedState!=st)currentWatedState=st;
+    }
+    public double trackPoseWithTurret(Pose2d target) {
+        Pose2d pose = drivetrain.OdometryModule.getPose2d();
+        Rotation2d poseRotation = drivetrain.OdometryModule.getPose2d().getRotation();
+        Transform2d transform2d = new Transform2d(Units.inchesToMeters(-4.0), 0.0, new Rotation2d());
+
+        Pose2d transformedPose = pose.plus(transform2d);
+
+        double fiducialY = target.getY();
+        double fiducialX = target.getX();
+
+        double robotX = transformedPose.getX();
+        double robotY = transformedPose.getY();
+
+        double dY = fiducialY - robotY;
+        double dX = fiducialX - robotX;
+
+        Rotation2d arcTanAngle = Rotation2d.fromRadians(Math.atan(dY / dX));
+
+        Rotation2d turretAngleTarget = new Rotation2d();
+
+        turretAngleTarget = arcTanAngle.plus(poseRotation).unaryMinus();
+        return turretAngleTarget.getDegrees();
+
     }
 
     public static void periodic() {
@@ -200,7 +225,7 @@ public class Superstructure {
 //                    revolver.startedTime=0;
 //                }
                 //turret.setTurretAngle(0);
-                flywheel.setSetpointRPM(1500);
+                flywheel.setSetpointRPM(2000);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 intake.setIntakeState(Intake.Systemstate.IDLE);
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GOLD);
@@ -240,11 +265,11 @@ public class Superstructure {
 //                }else if(!revolver.slot1.IsthereBall()&&!revolver.slot2.IsthereBall()&&revolver.slot3.IsthereBall()){
 //                    revolverTarget= (int) revolver.slot3.getAngle();
 //                }}
-                flywheel.setSetpointRPM(1500);
+                flywheel.setSetpointRPM(2000);
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
                 if(isPanic()){
                     intake.setIntakeState(Intake.Systemstate.EXHAUST);
-                    LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.HOT_PINK);
+                    LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.CONFETTI);
                 }else {
                     intake.setIntakeState(Intake.Systemstate.INTAKE);
                     LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.VIOLET);

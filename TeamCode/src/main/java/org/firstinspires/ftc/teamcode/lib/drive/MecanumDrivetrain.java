@@ -38,8 +38,7 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
         set(pose,new Rotation2d());
     }
 
-    public void set(double strafeSpeed, double forwardSpeed,
-                    double turnSpeed, Rotation2d rt) {
+    public void set(double strafeSpeed, double forwardSpeed, double turnSpeed, Rotation2d rt) {
         Translation2d input = new Translation2d(strafeSpeed, forwardSpeed).rotateBy(rt.unaryMinus());
 
         strafeSpeed = Range.clip(input.getX(), -1, 1);
@@ -158,7 +157,7 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
 //        }else{
 //            OdometryModule.resetPose(new Pose2d(new Translation2d(1.5,1.5),new Rotation2d()));
 //        }
-            OdometryModule.resetPose(new Pose2d(new Translation2d(1.5,1.5),new Rotation2d()));
+        OdometryModule.resetPose(new Pose2d(new Translation2d(1.61,-0.4),Rotation2d.fromDegrees(90)));
 
         OdometryModule.recalibrateIMU();
     }

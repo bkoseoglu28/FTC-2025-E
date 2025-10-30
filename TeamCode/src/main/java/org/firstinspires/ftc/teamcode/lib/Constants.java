@@ -18,18 +18,16 @@ public class Constants {
 //                {-15.39,11}
 //        };
         public static double[][] kRPMValues = {
-                {13.17, 3525},
-                {-16.65, 5300},
-
+                {14.15, 3900},
+                {-10.66, 4700},
+                {-16.01, 5500}
         };
         public static double[][] kHoodValues = {
-                {12.7,8},
-                {9.78,9},//15
-                {-1.8,25.5},
-                {-10.6,32},
-                {-12.8,33}
-//                {-15.20,0},
-//                {-16.65,9}
+                {14.15, 0},
+                {-6.75, 19},
+                {-10.66, 24},
+                {-14.48, 28},
+                {-16.40, 32}
         };
         public static InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> kHoodMap = new InterpolatingTreeMap<>();
         public static InterpolatingTreeMap<InterpolatingDouble, InterpolatingDouble> kRPMMap = new InterpolatingTreeMap<>();

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.drivetrain;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.revolver;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.turret;
@@ -77,7 +78,7 @@ public class SOLO extends OpMode {
         //robot.clearBulkCache();
         setVoltage(()-> hardwareMap.voltageSensor.iterator().next().getVoltage());
 
-        Superstructure.drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, -gamepad1.right_stick_x,new Rotation2d(Superstructure.drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
+        Superstructure.drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.8*-gamepad1.right_stick_x, new Rotation2d(Superstructure.drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
 
         if (gamepad1.right_bumper) {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.SHOOT);
@@ -96,17 +97,15 @@ public class SOLO extends OpMode {
 
         Superstructure.setPanic(gamepad1.triangle);
 
-
-
-
-        if(Superstructure.vision.robotPose!=null){
-            robopose =Superstructure.vision.robotPose;
+        if(Superstructure.vision.cameraToAprilTagPose!=null){
+            robopose =Superstructure.vision.cameraToAprilTagPose;
         }
+
         vibrator.update(gamepad1.ps);
         revolver.setVibrating(vibrator.getState());
         revolver.setManualAdjust(gamepad1.touchpad);
-//        telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
-//        telemetry.addData("hood angle",Superstructure.hood.getHoodAngle());
+//      telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
+        telemetry.addData("hood angle",Superstructure.hood.getHoodAngle());
 //        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
 //        telemetry.addData("voltage",Superstructure.voltage);
 //        telemetry.addData("shotter sensor",Superstructure.revolver.shooterSensor.getDistance(DistanceUnit.MM));
@@ -139,14 +138,7 @@ public class SOLO extends OpMode {
         telemetry.addData("ty",Superstructure.vision.ty);
         telemetry.addData("shooter Sensor", revolver.shooterSensor.getDistance(DistanceUnit.MM));
 
-//        sendPoseToDashboard(robopose);
-
-
-
-
-
-
-
+        sendPoseToDashboard(drivetrain.OdometryModule.getPose2d());
 
         Superstructure.read();
         Superstructure.periodic();
@@ -154,27 +146,27 @@ public class SOLO extends OpMode {
 
 
     }
-//    public static void sendPoseToDashboard(Pose2d pose) {
-//        TelemetryPacket packet = new TelemetryPacket();
-//
-//        // Add pose data as telemetry fields
-//        packet.put("x", DistanceUnit.INCH.fromMeters(pose.getX()));
-//        packet.put("y", DistanceUnit.INCH.fromMeters(pose.getY()));
-//        packet.put("heading (deg)", Math.toDegrees(pose.getRotation().getRadians()));
-//
-//        // Optionally draw the robot on the field overlay
-//        packet.fieldOverlay()
-//                .setStroke("blue")
-//                .strokeCircle(DistanceUnit.INCH.fromMeters(pose.getX()), DistanceUnit.INCH.fromMeters(pose.getY()), 5)
-//                .setStroke("red")
-//                .strokeLine(
-//                        DistanceUnit.INCH.fromMeters(pose.getX()),
-//                        DistanceUnit.INCH.fromMeters(pose.getY()),
-//                        DistanceUnit.INCH.fromMeters(pose.getX()) + 10 * Math.cos(pose.getRotation().getRadians()),
-//                        DistanceUnit.INCH.fromMeters(pose.getY()) + 10 * Math.sin(pose.getRotation().getRadians())
-//                );
-//
-//        dashboard.sendTelemetryPacket(packet);
-//    }
+    public static void sendPoseToDashboard(Pose2d pose) {
+        TelemetryPacket packet = new TelemetryPacket();
+
+        // Add pose data as telemetry fields
+        packet.put("x", DistanceUnit.INCH.fromMeters(pose.getX()));
+        packet.put("y", DistanceUnit.INCH.fromMeters(pose.getY()));
+        packet.put("heading (deg)", Math.toDegrees(pose.getRotation().getRadians()));
+
+        // Optionally draw the robot on the field overlay
+        packet.fieldOverlay()
+                .setStroke("blue")
+                .strokeCircle(DistanceUnit.INCH.fromMeters(pose.getX()), DistanceUnit.INCH.fromMeters(pose.getY()), 5)
+                .setStroke("red")
+                .strokeLine(
+                        DistanceUnit.INCH.fromMeters(pose.getX()),
+                        DistanceUnit.INCH.fromMeters(pose.getY()),
+                        DistanceUnit.INCH.fromMeters(pose.getX()) + 10 * Math.cos(pose.getRotation().getRadians()),
+                        DistanceUnit.INCH.fromMeters(pose.getY()) + 10 * Math.sin(pose.getRotation().getRadians())
+                );
+
+        dashboard.sendTelemetryPacket(packet);
+    }
 }
 

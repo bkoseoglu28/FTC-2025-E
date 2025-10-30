@@ -10,8 +10,12 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
 import edu.wpi.first.util.Util;
-
+@Config
 public class Hood extends WSubsystem {
+
+//    public static double kp=0.002;
+//    public static double ki=0.005;
+//    public static double kd=0.0;
     CRServoImplEx HoodMotor;
     AnalogInput HoodEncoder;
     org.firstinspires.ftc.teamcode.lib.RTPAxon axonController;
@@ -21,7 +25,9 @@ public class Hood extends WSubsystem {
         HoodMotor = hardwareMap.get(CRServoImplEx.class, "HoodMotor");
 
         axonController = new org.firstinspires.ftc.teamcode.lib.RTPAxon(HoodMotor,HoodEncoder, org.firstinspires.ftc.teamcode.lib.RTPAxon.Direction.FORWARD);
-        axonController.setPidCoeffs(0.0055,0,0.0000002);
+        axonController.setPidCoeffs(0.002,0.005,0.0);
+//        axonController.setPidCoeffs(0.0055,0,0.0000002);
+
     }
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(axonController.getTotalRotation(),axonController.getTargetRotation(),2);
@@ -29,8 +35,8 @@ public class Hood extends WSubsystem {
     double handleHoodSetpoint(double setpoint){
         if(setpoint<0.2){
             return 0.2;
-        } else if (setpoint>33) {
-            return 33;
+        } else if (setpoint>32) {
+            return 32;
         }
         return setpoint;
     }
@@ -43,7 +49,8 @@ public class Hood extends WSubsystem {
 
     @Override
     public void periodic() {
-    axonController.update();
+//        axonController.setPidCoeffs(kp,ki,kd);
+        axonController.update();
     }
 
     @Override
