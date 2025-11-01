@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.drivetrain;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.revolver;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.turret;
@@ -32,6 +31,7 @@ import com.qualcomm.robotcore.robot.Robot;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.lib.MathUtils;
 import org.firstinspires.ftc.teamcode.lib.RTPAxon;
 import org.firstinspires.ftc.teamcode.lib.RobotHardware;
@@ -40,6 +40,7 @@ import org.firstinspires.ftc.teamcode.lib.Subsystems.Feeder.Feeder;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Intake.Intake;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.FieldAprilTags;
+import org.firstinspires.ftc.teamcode.lib.drive.MecanumDrivetrain;
 import org.firstinspires.ftc.teamcode.lib.joysticklib.Toggle;
 import org.firstinspires.ftc.teamcode.wrappers.WActuatorGroup;
 import org.firstinspires.ftc.teamcode.wrappers.WEncoder;
@@ -55,19 +56,21 @@ import edu.wpi.first.math.util.Units;
 @TeleOp(name = "SOLO")
 public class SOLO extends OpMode {
     static FtcDashboard dashboard;
-    public static double targetRPM=0;
-    public static double hoodAngle=0;
+//    public static double targetRPM=0;
+//    public static double hoodAngle=0;
     Pose2d robopose = new Pose2d();
     double target = 0;
     boolean shoot = false;
     Toggle vibrator;
+    MecanumDrivetrain drivetrain;
 
 
     @Override
     public void init() {
         Superstructure.init(hardwareMap);
         Superstructure.reset();
-
+        drivetrain.init(hardwareMap);
+        drivetrain.setNewPose(new Pose2d(0,0,Rotation2d.fromDegrees(90)));
         vibrator=new Toggle(false);
         dashboard = FtcDashboard.getInstance();
         telemetry = dashboard.getTelemetry();
@@ -78,7 +81,7 @@ public class SOLO extends OpMode {
         //robot.clearBulkCache();
         setVoltage(()-> hardwareMap.voltageSensor.iterator().next().getVoltage());
 
-        Superstructure.drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.8*-gamepad1.right_stick_x, new Rotation2d(Superstructure.drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
+        drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.8*-gamepad1.right_stick_x, new Rotation2d(drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
 
         if (gamepad1.right_bumper) {
             Superstructure.setCurrentWantedState(Superstructure.wantedState.SHOOT);
@@ -97,8 +100,8 @@ public class SOLO extends OpMode {
 
         Superstructure.setPanic(gamepad1.triangle);
 
-        if(Superstructure.vision.cameraToAprilTagPose!=null){
-            robopose =Superstructure.vision.cameraToAprilTagPose;
+        if(Superstructure.vision.RobotPose!=null){
+            robopose =Superstructure.vision.RobotPose;
         }
 
         vibrator.update(gamepad1.ps);
@@ -129,16 +132,17 @@ public class SOLO extends OpMode {
 //        telemetry.addData("feeder blue",Superstructure.revolver.feederSensor.getNormalizedColors().blue);
 //        telemetry.addData("feeder color",Superstructure.revolver.currentFeeederColor.name());
         telemetry.addData("TargetRPM",Superstructure.flywheel.getShooterRPM());
+
         telemetry.addData("turret Angle",Superstructure.turret.getTurretAngle());
         telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
-        telemetry.addData("heading",Superstructure.drivetrain.OdometryModule.getRotation2d().getDegrees());
+        telemetry.addData("heading", drivetrain.OdometryModule.getPose2d().getRotation().getDegrees());
 //        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
         telemetry.addData("revolver target pose",Superstructure.revolver.RevolverController.getTargetPosition());
 //        telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
         telemetry.addData("ty",Superstructure.vision.ty);
         telemetry.addData("shooter Sensor", revolver.shooterSensor.getDistance(DistanceUnit.MM));
 
-        sendPoseToDashboard(drivetrain.OdometryModule.getPose2d());
+        sendPoseToDashboard(robopose);
 
         Superstructure.read();
         Superstructure.periodic();

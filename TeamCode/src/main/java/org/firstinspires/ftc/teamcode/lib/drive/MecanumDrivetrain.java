@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.Range;
 
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.lib.RobotHardware;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
@@ -34,10 +35,6 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
     double[] ws = new double[4];
 
     @Override
-    public void set(Translation2d pose) {
-        set(pose,new Rotation2d());
-    }
-
     public void set(double strafeSpeed, double forwardSpeed, double turnSpeed, Rotation2d rt) {
         Translation2d input = new Translation2d(strafeSpeed, forwardSpeed).rotateBy(rt.unaryMinus());
 
@@ -82,16 +79,16 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
         ws[3] = wheelSpeeds[3];
 
     }
-
-    public void set(Translation2d pose, Rotation2d rt) {
-        set(pose.getX(), pose.getY(), pose.getAngle().getDegrees(), rt);
+    @Override
+    public void set(Translation2d pose, double rt) {
+        set(pose.getX(), pose.getY(), rt,new Rotation2d(OdometryModule.getHeading(AngleUnit.RADIANS)));
     }
 
     @Override
     public void init(HardwareMap hardwareMap) {
         this.OdometryModule= hardwareMap.get(GoBildaPinpointDriver.class,"LocalizerModule");
         OdometryModule.initialize();
-        OdometryModule.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        OdometryModule.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
         OdometryModule.recalibrateIMU();
         OdometryModule.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
         OdometryModule.setOffsets(-159.5,27, DistanceUnit.MM);
@@ -127,6 +124,9 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
     public void read() {
         // Nothing here
     }
+    public void setNewPose(Pose2d ps){
+        OdometryModule.resetPose(ps);
+    }
 
     @Override
     public void write() {
@@ -157,8 +157,6 @@ public class MecanumDrivetrain extends WSubsystem implements Drivetrain {
 //        }else{
 //            OdometryModule.resetPose(new Pose2d(new Translation2d(1.5,1.5),new Rotation2d()));
 //        }
-        OdometryModule.resetPose(new Pose2d(new Translation2d(1.61,-0.4),Rotation2d.fromDegrees(90)));
-
         OdometryModule.recalibrateIMU();
     }
 

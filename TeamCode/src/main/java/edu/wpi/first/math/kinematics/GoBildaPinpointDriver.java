@@ -723,8 +723,8 @@ public class GoBildaPinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSi
                 AngleUnit.normalizeRadians(hOrientation));
     }
     public Pose2d getPose2d() {
-        return new Pose2d(new Translation2d(getPosX(DistanceUnit.METER),
-                getPosY(DistanceUnit.METER)),
+        return new Pose2d(new Translation2d(xPosition/1000,
+                yPosition/1000),
                 new Rotation2d(getHeading(AngleUnit.RADIANS)));
     }
     public Rotation2d getRotation2d(){

@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 import org.firstinspires.ftc.teamcode.lib.ProfileConstraints;
@@ -52,18 +53,21 @@ public class Turret extends WSubsystem {
     public boolean IsAtSetpoint(){
         return Util.epsilonEquals(getTurretAngle(),TurretController.getTargetPosition(),10);
     }
-    public double ff(){
-        Twist2d velocity = new Twist2d(Superstructure.drivetrain.OdometryModule.getVelX(DistanceUnit.METER),Superstructure.drivetrain.OdometryModule.getVelY(DistanceUnit.METER),Superstructure.drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS));
-        // Angular velocity component from tangential robot motion about the goal.
-        double tangential_component = 0;//mLatestAimingParameters.get().getRobotToGoalRotation().sin() * velocity.dx / mLatestAimingParameters.get().getRange();
-        double angular_component = Units.radiansToDegrees(velocity.dtheta);
-        // Add (opposite) of tangential velocity about goal + angular velocity in local frame.
-        return  -(angular_component + tangential_component);
-    }
+//    public double ff(){
+//        Twist2d velocity = new Twist2d(Superstructure.drivetrain.OdometryModule.getVelX(DistanceUnit.METER),Superstructure.drivetrain.OdometryModule.getVelY(DistanceUnit.METER),Superstructure.drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS));
+//        // Angular velocity component from tangential robot motion about the goal.
+//        double tangential_component = 0;//mLatestAimingParameters.get().getRobotToGoalRotation().sin() * velocity.dx / mLatestAimingParameters.get().getRange();
+//        double angular_component = Units.radiansToDegrees(velocity.dtheta);
+//        // Add (opposite) of tangential velocity about goal + angular velocity in local frame.
+//        return  -(angular_component + tangential_component);
+//    }
     public double getTurretAngle(){
         double encoderRots= TurretEncoder.getPosition()/28;
         return encoderRots*(1.0/(((1+(46.0/17.0))) * (1+(46.0/17.0))))*(16.0/112.0)*360;
     }
+//    public double getTurretFieldAngle(){
+//        return getTurretAngle()-Superstructure.drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
+//    }
     double handleTurretSetpoint(double setpoint){
         if(setpoint<-125){
             return -125;

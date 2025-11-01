@@ -47,7 +47,7 @@ public class Flywheel extends WSubsystem {
         //1.4,0.00185,0.0003
     }
     public boolean IsAtSetpoint(){
-        return Util.epsilonEquals(getShooterRPM(),VelocityController.getTargetVelocity(),100);
+        return Util.epsilonEquals(getShooterRPM(),VelocityController.getTargetVelocity(),200);
     }
     public void setSetpointRPM(double rpm){
         VelocityController.setTargetVelocity(rpm);

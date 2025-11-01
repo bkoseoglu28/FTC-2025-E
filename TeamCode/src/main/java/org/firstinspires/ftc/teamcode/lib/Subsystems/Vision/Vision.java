@@ -1,28 +1,23 @@
 package org.firstinspires.ftc.teamcode.lib.Subsystems.Vision;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
-import org.firstinspires.ftc.teamcode.lib.RobotHardware;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.lib.math.LinearFilter;
 import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
 
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.estimator.PinPointPoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 
 public class Vision extends WSubsystem {
     public Limelight3A LL3;
@@ -33,7 +28,7 @@ public class Vision extends WSubsystem {
     public double pitchRadians;
 
     LLResult results;
-    Pose2d cameratofieldPose = new Pose2d();
+    Pose2d TargetCamera = new Pose2d();
     public Pose2d RobotPose = new Pose2d();
 
     public Pose2d cameraToAprilTagPose;
@@ -61,9 +56,9 @@ public class Vision extends WSubsystem {
 
     @Override
     public void periodic() {
-        if(cameraToAprilTagPose!=null){
-            Superstructure.drivetrain.poseEstimator.addVisionMeasurement(cameraToAprilTagPose, System.currentTimeMillis(),VecBuilder.fill(results.getStddevMt1()[0],results.getStddevMt1()[1],results.getStddevMt1()[2]));
-        }
+//        if(cameraToAprilTagPose!=null){
+//            Superstructure.drivetrain.poseEstimator.addVisionMeasurement(cameraToAprilTagPose, System.currentTimeMillis(),VecBuilder.fill(results.getStddevMt1()[0],results.getStddevMt1()[1],results.getStddevMt1()[2]));
+//        }
 
     }
 
@@ -76,19 +71,15 @@ public class Vision extends WSubsystem {
             this.tx=results.getTx();
             this.ty= results.getTy();
             this.tv =results.isValid();
-            yawRadians = -Units.degreesToRadians(this.tx);
-            pitchRadians = Units.degreesToRadians(this.ty);
-            Rotation2d turretangle= Rotation2d.fromDegrees(Superstructure.turret.getTurretAngle());
-            double theta = pitchRadians + Units.degreesToRadians(24.62);
+            if(this.tv){
+                LLResultTypes.FiducialResult tag =results.getFiducialResults().get(0);
+                if(tag.getFiducialId()==20){
+                    Pose3D TargetPoseCamera =tag.getTargetPoseCameraSpace();
+                    TargetCamera = new Pose2d(new Translation2d(TargetPoseCamera.getPosition().toUnit(DistanceUnit.METER).x, TargetPoseCamera.getPosition().toUnit(DistanceUnit.METER).y),new Rotation2d(TargetPoseCamera.getOrientation().getYaw(AngleUnit.RADIANS)));
+                    this.RobotPose=getRobotToField(TargetCamera,FieldAprilTags.TAG_20,Rotation2d.fromDegrees(Superstructure.turret.getTurretAngle()),Rotation2d.fromDegrees(90));
+                }
+            }
 
-            double heightFromRobotToTargetMeters = 0.7493 - 0.31777;
-            double horizontalDistanceToTargetMeters = heightFromRobotToTargetMeters / Math.tan(theta);
-            cameraToAprilTagPose = new Pose2d(
-                    horizontalDistanceToTargetMeters * Math.cos(yawRadians),
-                    horizontalDistanceToTargetMeters * Math.sin(yawRadians),
-                    Rotation2d.fromRadians(yawRadians));
-
-            this.RobotPose=getRobotToField(cameratofieldPose,FieldAprilTags.TAG_20,turretangle,Superstructure.drivetrain.OdometryModule.getRotation2d());
             if(ApriltagID==21){
                 this.currentObelisk=Obelisk.GPP;
             } else if (ApriltagID==22) {
@@ -125,27 +116,66 @@ public class Vision extends WSubsystem {
             Pose2d visionPose, Pose3d tag, Rotation2d turretAngle, Rotation2d robotOrientation) {
 
         // Remove the inherit rotation in the apriltag pose.
-        Pose2d tag2d = tag.toPose2d();
+        Pose2d tag2d = new Pose2d(tag.toPose2d().getTranslation(), new Rotation2d());
         Rotation2d totalAngle = visionPose.getRotation().plus(turretAngle).plus(robotOrientation);
 
         // visionPose is the pose of the camera relative to the tag.
         Pose2d tagToCamera = new Pose2d(visionPose.getTranslation(), new Rotation2d())
-                .rotateBy(totalAngle)
-                .rotateBy(Rotation2d.fromDegrees(0));
+                .rotateBy(totalAngle);
 
         Transform2d tagToCameraTransform = new Transform2d(tagToCamera.getTranslation(), new Rotation2d());
         Pose2d cameraToTag = tag2d.plus(tagToCameraTransform);
 
         // Calculate the root relative offset of camera.
-        Translation2d turretToCamera = new Translation2d(0.16277,0);
-        Translation2d robotToTurret = new Translation2d(-0.065,0);
+        Translation2d turretToCamera = new Translation2d(0.16277, 0);
+        Translation2d robotToTurret = new Translation2d(-0.065, 0);
         Translation2d robotToCamera = robotToTurret.plus(turretToCamera.rotateBy(turretAngle.plus(visionPose.getRotation())));
 
         Translation2d robotToTagTranslation = robotToCamera
-                .rotateBy(robotOrientation.rotateBy(Rotation2d.fromDegrees(0)))
+                .rotateBy(robotOrientation)
                 .plus(cameraToTag.getTranslation());
 
         return new Pose2d(robotToTagTranslation, robotOrientation);
+    }
+    protected Pose2d getDeepSeekRobotToField(
+            Pose2d visionPose, Pose3d tag, Rotation2d turretAngle, Rotation2d robotOrientation) {
+
+        Pose2d tagOnField = tag.toPose2d();
+
+        // Offsets
+        Translation2d cameraToTurret = new Translation2d(0.16277, 0);
+        Translation2d turretToRobot = new Translation2d(-0.065, 0);
+
+        // Step 1: Camera in field coordinates
+        Pose2d cameraOnField = tagOnField.transformBy(new Transform2d(
+                visionPose.getTranslation().rotateBy(tagOnField.getRotation()),
+                visionPose.getRotation()
+        ));
+
+        // Step 2: Calculate robot orientation
+        // camera field rotation = robot orientation + turret angle + camera relative to turret
+        // So: robot orientation = camera field rotation - turret angle - camera relative to turret
+        Rotation2d calculatedRobotOrientation = cameraOnField.getRotation()
+                .minus(turretAngle);
+
+        // Step 3: Calculate robot position using transformation chain
+        // Camera -> Turret -> Robot
+        Transform2d cameraToTurretTransform = new Transform2d(
+                cameraToTurret.rotateBy(visionPose.getRotation()),
+                new Rotation2d()
+        );
+
+        Transform2d turretToRobotTransform = new Transform2d(
+                turretToRobot.rotateBy(calculatedRobotOrientation),
+                new Rotation2d()
+        );
+
+        // Combine transformations: camera -> turret -> robot
+        Pose2d robotOnField = cameraOnField
+                .transformBy(cameraToTurretTransform)
+                .transformBy(turretToRobotTransform);
+
+        return new Pose2d(robotOnField.getTranslation(), calculatedRobotOrientation);
     }
     @Override
     public void write() {

@@ -115,6 +115,11 @@ public class Revolver extends WSubsystem {
     public void setVoltage(DoubleSupplier voltage){
         RevolverController.setVoltageSupplier(voltage);
     }
+    public boolean RevolverHasBall(){
+        if(IsAtSetpoint()){
+            return slot3.IsthereBall() || slot2.IsthereBall() || slot1.IsthereBall();
+        }else{return true;}
+    }
     public void getLeftColor(){
         double normred =leftSensor.getNormalizedColors().red;
         double normblue =leftSensor.getNormalizedColors().blue;
