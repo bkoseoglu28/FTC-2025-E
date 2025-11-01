@@ -145,8 +145,11 @@ public class SOLO extends OpMode {
         sendPoseToDashboard(robopose);
 
         Superstructure.read();
+        drivetrain.read();
         Superstructure.periodic();
+        drivetrain.periodic();
         Superstructure.write();
+        drivetrain.write();
 
 
     }
