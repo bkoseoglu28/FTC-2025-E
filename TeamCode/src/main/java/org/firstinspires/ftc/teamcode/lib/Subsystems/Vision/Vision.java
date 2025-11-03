@@ -49,7 +49,11 @@ public class Vision extends WSubsystem {
     @Override
     public void init(HardwareMap hardwareMap) {
         LL3 = hardwareMap.get(Limelight3A.class,"limelight");
-        LL3.pipelineSwitch(0);
+        if(Superstructure.IsBlue){
+            LL3.pipelineSwitch(0);
+        }else{
+            LL3.pipelineSwitch(1);
+        }
         LL3.start();
         filter = new LinearFilter(3);
     }

@@ -13,36 +13,48 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "Yakın Auto")
-
-public class YAKIN extends OpMode {
+@Autonomous(name = "BLUE YAKIN AUTO")
+public class BLUE_YAKIN_AUTO extends OpMode {
 
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
     private int pathState;
 
-    private final Pose startPose = new Pose(63.00, 135.00, Math.toRadians(180)); // Start Pose of our robot.
-
-    private final Pose scorePose = new Pose(63.00, 84.00, Math.toRadians(180));
-
-    private final Pose pickUpPose = new Pose(16.00, 84.00, Math.toRadians(180));
+    private final Pose startPose = new Pose(33.50, 135.50, Math.toRadians(180));
+    private final Pose scorePose = new Pose(65.00, 84.00, Math.toRadians(120));
+    private final Pose score2Pose = new Pose(55.00, 108.00, Math.toRadians(135));
+    private final Pose score3Pose = new Pose(55.00, 108.00, Math.toRadians(135));
+    private final Pose pickUp1Pose = new Pose(23.00, 84.00, Math.toRadians(180));
+    private final Pose pickUp2Pose = new Pose(23.00, 60.00, Math.toRadians(180));
+    private final Pose pickUpControl1Pose = new Pose(69.00, 81.50);
+    private final Pose pickUpControl2Pose = new Pose(79.00, 55.00);
 
 
     private Path scorePreload;
-    private PathChain grabPickup1, scorePickup1;
+    private PathChain pickUp1, scorePickUp1, pickUp2, scorePickUp2;
 
     public void buildPaths() {
         scorePreload = new Path(new BezierLine(startPose, scorePose));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
 
-        grabPickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose,pickUpPose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(),pickUpPose.getHeading())
+        pickUp1 = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose,pickUp1Pose))
+                .setLinearHeadingInterpolation(scorePose.getHeading(),pickUp1Pose.getHeading())
                 .build();
 
-        scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickUpPose,scorePose))
-                .setLinearHeadingInterpolation(pickUpPose.getHeading(),scorePose.getHeading())
+        scorePickUp1 = follower.pathBuilder()
+                .addPath(new BezierCurve(pickUp1Pose,pickUpControl1Pose,score2Pose))
+                .setLinearHeadingInterpolation(pickUp1Pose.getHeading(),score2Pose.getHeading())
+                .build();
+
+        pickUp2 = follower.pathBuilder()
+                .addPath(new BezierCurve(score2Pose,pickUpControl2Pose,pickUp2Pose))
+                .setLinearHeadingInterpolation(score2Pose.getHeading(),pickUp2Pose.getHeading())
+                .build();
+
+        scorePickUp2 = follower.pathBuilder()
+                .addPath(new BezierLine(pickUp2Pose,score3Pose))
+                .setLinearHeadingInterpolation(pickUp2Pose.getHeading(),score3Pose.getHeading())
                 .build();
     }
 
@@ -61,27 +73,50 @@ public class YAKIN extends OpMode {
             case 2:
                 if(pathTimer.getElapsedTimeSeconds() > 5.0){
                     Superstructure.setCurrentWantedState(Superstructure.wantedState.INTAKE);
-                    follower.followPath(grabPickup1,true);  // Path'i burada başlat
+                    follower.followPath(pickUp1,true);
                     setPathState(3);
                 }
                 break;
             case 3:
                 if (!follower.isBusy()){
-                    follower.followPath(scorePickup1,true);
+                    follower.followPath(scorePickUp1,true);
                     setPathState(4);
                 }
                 break;
             case 4:
-                    if(!follower.isBusy()){
-                        Superstructure.setCurrentWantedState(Superstructure.wantedState.SHOOT);
-                        setPathState(5);
-                    }
+                if(!follower.isBusy()){
+                    Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
+                    setPathState(5);
+                }
                 break;
             case 5:
-                if(pathTimer.getElapsedTimeSeconds() > 5.0){  // Shooting için 5 saniye bekle
-                    Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
-                    setPathState(-1);  // Bitir
+                Superstructure.setCurrentWantedState(Superstructure.wantedState.SHOOT);
+                setPathState(6);
+                break;
+            case 6:
+                if(pathTimer.getElapsedTimeSeconds() > 5.0){
+                    Superstructure.setCurrentWantedState(Superstructure.wantedState.INTAKE);
+                    follower.followPath(pickUp2,true);
+                    setPathState(7);
                 }
+                break;
+            case 7:
+                if (!follower.isBusy()){
+                    follower.followPath(scorePickUp2,true);
+                    setPathState(8);
+                }
+                break;
+            case 8:
+                if(!follower.isBusy()){
+                    Superstructure.setCurrentWantedState(Superstructure.wantedState.IDLE);
+                    setPathState(9);
+                }
+                break;
+            case 9:
+                Superstructure.setCurrentWantedState(Superstructure.wantedState.HOME);
+                setPathState(-1);
+//                Superstructure.setCurrentWantedState(Superstructure.wantedState.SHOOT);
+//                setPathState(10);
                 break;
         }
     }
@@ -99,6 +134,7 @@ public class YAKIN extends OpMode {
         follower.setStartingPose(startPose);
         buildPaths();
         Superstructure.init(hardwareMap);
+        Superstructure.setIsBlue(true);
     }
 
     @Override

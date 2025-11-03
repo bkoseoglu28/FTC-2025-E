@@ -60,19 +60,22 @@ public class Superstructure {
     static double turretHintAdjustment=27;
     public static boolean panic;
     public static boolean IS_AUTO=false;
-    public static double angularVel;
+    public static double angularVel=0;
+    public static boolean IsBlue=true;
 
     public static enum systemState{
         IDLE,
         AIMING,
         SHOOTING,
         SHOOTING_OBELISK,
-        INTAKING
+        INTAKING,
+        HOME
     }
     public static enum wantedState{
         SHOOT,
         INTAKE,
-        IDLE
+        IDLE,
+        HOME
     }
 
     public static void init(HardwareMap hardwareMap) {
@@ -89,6 +92,9 @@ public class Superstructure {
     }
     public static void setPanic(boolean pc) {
         panic = pc;
+    }
+    public static void setIsBlue(boolean al) {
+        IsBlue = al;
     }
 
     public static boolean isPanic() {
@@ -138,11 +144,15 @@ public class Superstructure {
             case INTAKE:
                 setCurrentSystemState(systemState.INTAKING);
                 break;
+            case HOME:
+                setCurrentSystemState(systemState.HOME);
+                break;
             case IDLE:
             default:
                 setCurrentSystemState(systemState.IDLE);
                 break;
         }
+        if(currentSystemState!=systemState.HOME) {
         if(revolver.currentSlot.IsthereBall()){
             if(!revolver.startVibrating&&!revolver.manualadjust){
                 revolver.stopVibration();
@@ -194,31 +204,33 @@ public class Superstructure {
 //        Translation2d robotToTurret = new Translation2d(-65.0/1000, 0);
 //        Translation2d turrettorobot=drivetrain.OdometryModule.getPose2d().getTranslation().plus(robotToTurret);
 //        turret.setTurretAngle(FieldAprilTags.TAG_20.toPose2d().getTranslation().minus(turrettorobot).getAngle().getDegrees());
+                double robotangularvel = angularVel;
 
-        double robotangularvel = Units.degreesToRadians(angularVel);
 
-        double velcompdegrees = -0.213*Units.radiansToDegrees(robotangularvel);
-        filteredTx = 0.1 * vision.tx + (1 - 0.1) * filteredTx;
-        double compensatetx = -vision.tx*0.7+ velcompdegrees;
-        double error;
-        if(vision.tv){
-            error= turret.getTurretAngle()+compensatetx;
-            error= new Rotation2d(Units.degreesToRadians(error)).getDegrees()+ (Timer.getFPGATimestamp() -mT) * -Units.radiansToDegrees(robotangularvel);
-            mT=Timer.getFPGATimestamp();
-            turret.setTurretAngle(error);
+
+            double velcompdegrees = -0.213 * Units.radiansToDegrees(robotangularvel);
+            filteredTx = 0.1 * vision.tx + (1 - 0.1) * filteredTx;
+            double compensatetx = -vision.tx * 0.7 + velcompdegrees;
+            double error;
+            if (vision.tv) {
+                error = turret.getTurretAngle() + compensatetx;
+                error = new Rotation2d(Units.degreesToRadians(error)).getDegrees() + (Timer.getFPGATimestamp() - mT) * -Units.radiansToDegrees(robotangularvel);
+                mT = Timer.getFPGATimestamp();
+                turret.setTurretAngle(error);
 //            lastknownangle=error+drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
-        }else{
-            if(turret.getTurretAngle()>=120){
-                hint=-27;
-            }else if(turret.getTurretAngle()<=-120){
-                hint=27;
+            } else {
+                if (turret.getTurretAngle() >= 120) {
+                    hint = -27;
+                } else if (turret.getTurretAngle() <= -120) {
+                    hint = 27;
+                }
+                turretHintAdjustment = turret.getTurretAngle();
+                turretHintAdjustment += hint;
+                turret.setTurretAngle(turretHintAdjustment);
             }
-            turretHintAdjustment=turret.getTurretAngle();
-            turretHintAdjustment+=hint;
-            turret.setTurretAngle(turretHintAdjustment);
-        }
 
-        hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+            hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+        }
 //        hood.setHoodAngle(setpointHood);
 
 
@@ -284,6 +296,11 @@ public class Superstructure {
                     intake.setIntakeState(Intake.Systemstate.INTAKE);
                     LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.VIOLET);
                 }
+                break;
+            case HOME:
+                turret.setTurretAngle(0.0);
+                hood.setHoodAngle(0.0);
+                revolver.setRevolverAngle(0.0);
                 break;
         }
         feeder.periodic();

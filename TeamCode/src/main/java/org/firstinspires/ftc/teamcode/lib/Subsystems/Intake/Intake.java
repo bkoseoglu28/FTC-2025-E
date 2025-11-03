@@ -12,6 +12,8 @@ public class Intake extends WSubsystem {
 
     CRServo masterIntakeMotor;
     CRServo slaveIntakeMotor;
+
+    CRServo downIntakeMotor;
     Systemstate currentState= Systemstate.IDLE;
     public enum Systemstate{
         IDLE,
@@ -24,10 +26,13 @@ public class Intake extends WSubsystem {
         masterIntakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         slaveIntakeMotor = hardwareMap.get(CRServo.class,"slaveIntakeMotor");
         slaveIntakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        downIntakeMotor = hardwareMap.get(CRServo.class,"downIntakeMotor");
+        downIntakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
     }
     void setIntakeMotor(double speed){
         masterIntakeMotor.setPower(speed);
         slaveIntakeMotor.setPower(speed);
+        downIntakeMotor.setPower(speed);
     }
     public void setIntakeState(Systemstate st){
         if(currentState!=st){
