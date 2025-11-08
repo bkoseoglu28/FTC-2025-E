@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.follower;
+
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -15,11 +17,10 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 @Autonomous(name = "RED UZAK AUTO")
 public class RED_UZAK_AUTO extends OpMode {
 
-    private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
     private int pathState;
 
-    private final Pose startPose = new Pose(87.4, 9.30, Math.toRadians(90));
+    private final Pose startPose = new Pose(87.4, 8.0, Math.toRadians(90));
     private final Pose pickUp1Pose = new Pose(120.00, 36.00, Math.toRadians(0));
     private final Pose scorePose = new Pose(80.50, 31.50, Math.toRadians(65));
 
@@ -103,7 +104,6 @@ public class RED_UZAK_AUTO extends OpMode {
         pathTimer = new Timer();
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
-        follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(startPose);
         buildPaths();
         Superstructure.init(hardwareMap);

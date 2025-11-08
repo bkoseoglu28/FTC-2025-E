@@ -4,7 +4,7 @@ package org.firstinspires.ftc.teamcode.lib;
 import org.firstinspires.ftc.teamcode.lib.math.InterpolatingDouble;
 import org.firstinspires.ftc.teamcode.lib.math.InterpolatingTreeMap;
 
-public class Constants {
+public class ShooterConstants {
     public static class ShootingParams{
 //        public static double[][] kRPMValues = {
 //                {9.78, 3000},

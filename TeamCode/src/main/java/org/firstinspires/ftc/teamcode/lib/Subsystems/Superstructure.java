@@ -1,14 +1,14 @@
 package org.firstinspires.ftc.teamcode.lib.Subsystems;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
 import com.acmerobotics.dashboard.config.Config;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.CoordinateSystem;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
-import org.firstinspires.ftc.teamcode.lib.Constants;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.lib.ShooterConstants;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Feeder.Feeder;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.FlyWheel.Flywheel;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Hood.Hood;
@@ -17,9 +17,9 @@ import org.firstinspires.ftc.teamcode.lib.Subsystems.Revolver.Revolver;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Turret.Turret;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.FieldAprilTags;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Vision.Vision;
-import org.firstinspires.ftc.teamcode.lib.drive.MecanumDrivetrain;
 import org.firstinspires.ftc.teamcode.lib.math.InterpolatingDouble;
-import org.firstinspires.ftc.teamcode.wrappers.WSubsystem;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+;
 
 import java.util.function.DoubleSupplier;
 
@@ -27,10 +27,8 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.GoBildaPinpointDriver;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Timer;
 
 @Config
 public class Superstructure {
@@ -62,6 +60,9 @@ public class Superstructure {
     public static boolean IS_AUTO=false;
     public static double angularVel=0;
     public static boolean IsBlue=true;
+    public static Follower follower;
+    public static Pose target;
+
 
     public static enum systemState{
         IDLE,
@@ -85,10 +86,17 @@ public class Superstructure {
         revolver.init(hardwareMap);
         turret.init(hardwareMap);
         vision.init(hardwareMap);
+        follower = Constants.createFollower(hardwareMap);
+
         //drivetrain.init(hardwareMap);
         intake.init(hardwareMap);
         hardwaremap=hardwareMap;
         LEDS = hardwareMap.get(RevBlinkinLedDriver.class, "ledDriver");
+        if(IsBlue){
+            target= FieldAprilTags.PEDRO_TAG_20;
+        }else{
+            target = FieldAprilTags.PEDRO_TAG_24;
+        }
     }
     public static void setPanic(boolean pc) {
         panic = pc;
@@ -106,30 +114,29 @@ public class Superstructure {
     public static void setCurrentWantedState(wantedState st){
         if(currentWatedState!=st)currentWatedState=st;
     }
-//    public double trackPoseWithTurret(Pose2d target) {
-//        Pose2d pose = drivetrain.OdometryModule.getPose2d();
-//        Rotation2d poseRotation = drivetrain.OdometryModule.getPose2d().getRotation();
-//        Transform2d transform2d = new Transform2d(Units.inchesToMeters(-4.0), 0.0, new Rotation2d());
-//
-//        Pose2d transformedPose = pose.plus(transform2d);
-//
-//        double fiducialY = target.getY();
-//        double fiducialX = target.getX();
-//
-//        double robotX = transformedPose.getX();
-//        double robotY = transformedPose.getY();
-//
-//        double dY = fiducialY - robotY;
-//        double dX = fiducialX - robotX;
-//
-//        Rotation2d arcTanAngle = Rotation2d.fromRadians(Math.atan(dY / dX));
-//
-//        Rotation2d turretAngleTarget = new Rotation2d();
-//
-//        turretAngleTarget = arcTanAngle.plus(poseRotation).unaryMinus();
-//        return turretAngleTarget.getDegrees();
-//
-//    }
+    public static double trackPoseWithTurret(Pose target) {
+        Pose pose = follower.getPose();
+        Pose transform2d = new Pose(Units.metersToInches(-0.065), 0.0, 0);
+
+        Pose transformedPose = pose.plus(transform2d);
+
+        double fiducialY = target.getY();
+        double fiducialX = target.getX();
+
+        double robotX = transformedPose.getX();
+        double robotY = transformedPose.getY();
+
+        double dY = fiducialY - robotY;
+        double dX = fiducialX - robotX;
+
+        Rotation2d arcTanAngle = Rotation2d.fromRadians(Math.atan(dY / dX));
+
+        Rotation2d turretAngleTarget = new Rotation2d();
+
+        turretAngleTarget = arcTanAngle.plus(Rotation2d.fromRadians(pose.getHeading())).unaryMinus();
+        return turretAngleTarget.getDegrees();
+
+    }
     public static void setAngularVel(double a){
         angularVel = a;
     }
@@ -190,46 +197,19 @@ public class Superstructure {
             revolver.setRevolverAngle(revolverTarget);
         }
 
-
         Rotation2d fieldTurretAngle = new Rotation2d(Units.degreesToRadians(turret.getTurretAngle())).minus(new Rotation2d(Units.degreesToRadians(vision.tx)));
-
-// Vision hedefini world-relative hale getir
-
-// PID veya direkt düzeltme uygula
-//        if(Superstructure.vision.tv){
-//            turret.setTurretAngle(fieldTurretAngle.getDegrees());
-//        }else{
-//            turret.setTurretAngle(new Rotation2d(drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)).unaryMinus().minus(fieldTurretAngle).getDegrees());
-//        }
-//        Translation2d robotToTurret = new Translation2d(-65.0/1000, 0);
-//        Translation2d turrettorobot=drivetrain.OdometryModule.getPose2d().getTranslation().plus(robotToTurret);
-//        turret.setTurretAngle(FieldAprilTags.TAG_20.toPose2d().getTranslation().minus(turrettorobot).getAngle().getDegrees());
-                double robotangularvel = angularVel;
-
-
-
-            double velcompdegrees = -0.213 * Units.radiansToDegrees(robotangularvel);
-            filteredTx = 0.1 * vision.tx + (1 - 0.1) * filteredTx;
-            double compensatetx = -vision.tx * 0.7 + velcompdegrees;
-            double error;
+        double robotangularvel = follower.getAngularVelocity();
+        double velcompdegrees = -0.213 * Units.radiansToDegrees(robotangularvel);
+        double compensatetx = -vision.tx * 0.7 + velcompdegrees;
+        double error;
             if (vision.tv) {
                 error = turret.getTurretAngle() + compensatetx;
-                error = new Rotation2d(Units.degreesToRadians(error)).getDegrees() + (Timer.getFPGATimestamp() - mT) * -Units.radiansToDegrees(robotangularvel);
-                mT = Timer.getFPGATimestamp();
                 turret.setTurretAngle(error);
-//            lastknownangle=error+drivetrain.OdometryModule.getHeading(AngleUnit.DEGREES);
             } else {
-                if (turret.getTurretAngle() >= 120) {
-                    hint = -27;
-                } else if (turret.getTurretAngle() <= -120) {
-                    hint = 27;
-                }
-                turretHintAdjustment = turret.getTurretAngle();
-                turretHintAdjustment += hint;
-                turret.setTurretAngle(turretHintAdjustment);
+                turret.setTurretAngle(trackPoseWithTurret(target));
             }
 
-            hood.setHoodAngle(Constants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+            hood.setHoodAngle(ShooterConstants.ShootingParams.kHoodMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
         }
 //        hood.setHoodAngle(setpointHood);
 
@@ -251,7 +231,7 @@ public class Superstructure {
                 break;
             case AIMING:
                 revolver.setManualAdjust(false);
-                flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+                flywheel.setSetpointRPM(ShooterConstants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
 //                flywheel.setSetpointRPM(setpointRPM);
 
                 feeder.setFeederState(Feeder.Systemstate.IDLE);
@@ -268,7 +248,7 @@ public class Superstructure {
                     }
                 LEDS.setPattern(RevBlinkinLedDriver.BlinkinPattern.GREEN);
                     revolver.setManualAdjust(true);
-                flywheel.setSetpointRPM(Constants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
+                flywheel.setSetpointRPM(ShooterConstants.ShootingParams.kRPMMap.getInterpolated(new InterpolatingDouble(Superstructure.vision.ty)).value);
 //                flywheel.setSetpointRPM(setpointRPM);
                 feeder.setFeederState(Feeder.Systemstate.FEED);
                 intake.setIntakeState(Intake.Systemstate.IDLE);

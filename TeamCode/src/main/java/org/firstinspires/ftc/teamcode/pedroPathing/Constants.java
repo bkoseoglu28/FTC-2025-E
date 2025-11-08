@@ -14,8 +14,6 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-import edu.wpi.first.math.util.Units;
-
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
             .mass(20.0)
@@ -47,7 +45,7 @@ public class Constants {
                     0.0
             ))
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(
-                    0.005,
+                    0.01,
                     0.0,
                     0.0015,
                     0.6,
@@ -61,7 +59,7 @@ public class Constants {
                     0.0
             ))
             .drivePIDFSwitch(15)
-            .centripetalScaling(0.0009);
+            .centripetalScaling(0.00025);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .leftFrontMotorName("frontLeftMotor")

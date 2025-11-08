@@ -1,15 +1,14 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.follower;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.revolver;
 import static org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure.setVoltage;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 import org.firstinspires.ftc.teamcode.lib.Subsystems.Superstructure;
@@ -30,32 +29,37 @@ public class SOLO_Blue extends OpMode {
     double target = 0;
     boolean shoot = false;
     Toggle vibrator;
-    MecanumDrivetrain drivetrain=new MecanumDrivetrain();
-
-
-
+    //MecanumDrivetrain drivetrain=new MecanumDrivetrain();
 
     @Override
     public void init() {
         Superstructure.setIsBlue(true);
         Superstructure.init(hardwareMap);
         Superstructure.reset();
-        drivetrain.init(hardwareMap);
+        //drivetrain.init(hardwareMap);
         vibrator=new Toggle(false);
+        follower.update();
+
 //        dashboard = FtcDashboard.getInstance();
 //        telemetry = dashboard.getTelemetry();
     }
 
     @Override
+    public void start() {
+        follower.startTeleopDrive();
+    }
+
+    @Override
     public void loop() {
+        follower.update();
         //robot.clearBulkCache();
         setVoltage(()-> hardwareMap.voltageSensor.iterator().next().getVoltage());
 
-        drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.7*-gamepad1.right_stick_x, new Rotation2d(drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
-
+        //drivetrain.set(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.7*-gamepad1.right_stick_x, new Rotation2d(drivetrain.OdometryModule.getHeading(AngleUnit.RADIANS)));
+        follower.setTeleOpDrive(-gamepad1.left_stick_x,gamepad1.left_stick_y, 0.5*-gamepad1.right_stick_x);
         if (gamepad1.options) {
-            drivetrain.OdometryModule.resetPosAndIMU();
-            drivetrain.OdometryModule.recalibrateIMU();
+//            drivetrain.OdometryModule.resetPosAndIMU();
+//            drivetrain.OdometryModule.recalibrateIMU();
 //            localizer.setPose(globalTagPosition);
         }
 
@@ -79,7 +83,7 @@ public class SOLO_Blue extends OpMode {
         if(Superstructure.vision.RobotPose!=null){
             robopose =Superstructure.vision.RobotPose;
         }
-        Superstructure.setAngularVel(Units.degreesToRadians(drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)));
+        //Superstructure.setAngularVel(Units.degreesToRadians(drivetrain.OdometryModule.getHeadingVelocity(UnnormalizedAngleUnit.RADIANS)));
 
         vibrator.update(gamepad1.ps);
         revolver.setVibrating(vibrator.getState());
@@ -112,7 +116,7 @@ public class SOLO_Blue extends OpMode {
 
         telemetry.addData("turret Angle",Superstructure.turret.getTurretAngle());
         telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
-        telemetry.addData("heading", drivetrain.OdometryModule.getPose2d().getRotation().getDegrees());
+        //telemetry.addData("heading", drivetrain.OdometryModule.getPose2d().getRotation().getDegrees());
 //        telemetry.addData("revolver angle",Superstructure.revolver.getRevolverAngle().getDegrees());
         telemetry.addData("revolver target pose",Superstructure.revolver.RevolverController.getTargetPosition());
 //        telemetry.addData("revolver ıs",Superstructure.revolver.IsAtSetpoint());
@@ -124,11 +128,11 @@ public class SOLO_Blue extends OpMode {
 //        sendPoseToDashboard(robopose);
 
         Superstructure.read();
-        drivetrain.read();
+        //drivetrain.read();
         Superstructure.periodic();
-        drivetrain.periodic();
+        //drivetrain.periodic();
         Superstructure.write();
-        drivetrain.write();
+        //drivetrain.write();
 
 
     }}
